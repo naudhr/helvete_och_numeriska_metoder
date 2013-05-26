@@ -4,6 +4,7 @@
 #include <QWidget>
 #include "params.h"
 
+class QDoubleValidator;
 class QProgressBar;
 class QPushButton;
 class QLineEdit;
@@ -35,18 +36,18 @@ class StartingPage : public QWidget
     QProgressBar* progress_bar_trapeze;
 
     QLineEdit *K0f, *K1f, *Ur0, *K0u, *K1u;
-    QLineEdit *Y11, *Y12, *A11, *A12, *Y11em, *Y12em, *A11em, *A12em, *P0f;
+    QLineEdit *Y11, *Y12, *A11, *A12, *Y11em, *Y12em, *A11em, *A12em, *Pd;
     QLineEdit *Delta0, *Eqe0, *Eqprime0, *U0, *V0;
     QLineEdit *Tstart, *Tstop, *dt;
     QLineEdit *eps;
     QLineEdit *max_iterations;
+    QDoubleValidator* validator;
 
     Params collect_params();
-    bool if_all_fields_are_filled();
 
   private slots:
     void start();
-    void change_params_reactor();
+    void enable_everything(bool);
     void increment_eiler();
     void increment_trapeze();
     //void plot_answer(Answer);

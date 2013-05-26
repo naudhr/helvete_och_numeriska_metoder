@@ -4,6 +4,10 @@
 #include <cassert>
 #include <iostream>
 
+// the Trapeze and Eiler matrix and vector statements are fully and trully
+// Chich-Pych's intellectual property and thus are subjects of some kinds
+// of copyright.
+
 //-----------------------------------------------------------------------
 // Ok, just to spill ublas off. Can't imagine how to build that ublas stuff on a winbox...
 class IMatrix
@@ -163,7 +167,7 @@ X solve_gauss(const IMatrix& I, const X& W)
 struct Equiv
 {
     double Y11, Y12, A11, A12;
-    double Upphi;
+    double Pd, Upphi;
 };
 
 struct NewtonDoesNotConverge {};
@@ -188,7 +192,6 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
 //-----------------------------------------------------------------------
 
 constexpr double Pt0 = 1.;
-constexpr double Pd = 5.;
 constexpr double T = 1.;
 constexpr double Ty = 5.1;
 constexpr double Tu = 0.05;
@@ -213,6 +216,7 @@ Equiv equiv_params(double t, const X& x, const Params& p, Equiv e)
     e.Y12 = t<0.12 ? p.repl.Y12em : p.repl.Y12;
     e.A11 = t<0.12 ? p.repl.A11em : p.repl.A11;
     e.A12 = t<0.12 ? p.repl.A12em : p.repl.A12;
+    e.Pd = p.repl.Pd;
     const auto U = x(11);
     if(U < 0.85) e.Upphi = 2.*Eqenom - (2.*Eqenom - p.start.Eqe0)*std::exp(-p.dt/Te);
     if(U > 0.9)  e.Upphi = 0.;
@@ -242,7 +246,7 @@ struct Eiler {
 
         X W;
         W(0) = delta - delta_k - dt*domega;
-        W(1) = domega - domega_k - (dt/Ty)*omega_nom*(Pt0 - Pd/omega_nom*domega - Eqprime*U/Xdprime*sin(d_v) + U*U*Xdp*sin(d_v)*cos(d_v));
+        W(1) = domega - domega_k - (dt/Ty)*omega_nom*(Pt0 - e.Pd/omega_nom*domega - Eqprime*U/Xdprime*sin(d_v) + U*U*Xdp*sin(d_v)*cos(d_v));
         W(2) = Eqprime - Eqprime_k - (dt/Td0)*(Eqe - Eqprime*Xd/Xdprime + U*Xd*Xdp*cos(d_v));
         W(3) = X3 - X3_k - (dt/Tu)*(reg.K0u*(reg.Ur0 - U) - X3);
         W(4) = X4 - X4_k - (dt/Tg)*(reg.K1u/Tu*(reg.Ur0 - U - X3/reg.K0u) - X4);
@@ -269,7 +273,7 @@ struct Eiler {
         I(0,0) = -dt;
         I(0,1) = 1.;
 
-        I(1,0) = (dt/Ty)*Pd + 1.;
+        I(1,0) = (dt/Ty)*e.Pd + 1.;
         I(1,1) = (dt/Ty)*omega_nom*(Eqprime*U/Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v));
         I(1,2) = (dt/Ty)*omega_nom*U/Xdprime*sin(d_v);
         I(1,10) = -I(1,1);
@@ -390,7 +394,7 @@ struct Trapeze {
 
         X W;
         W(0) = delta - delta_k - dt/2.*(domega + domega_k);
-        W(1) = domega - domega_k - dt/Ty/2.*omega_nom*(Pt0 + Pt0 - Pd/omega_nom*(domega + domega_k)
+        W(1) = domega - domega_k - dt/Ty/2.*omega_nom*(Pt0 + Pt0 - e.Pd/omega_nom*(domega + domega_k)
                 - Eqprime*U/Xdprime*sin(d_v) - Eqprime_k*U_k/Xdprime*sin(d_v_k)
                 + U*U*Xdp*sin(d_v)*cos(d_v) + U_k*U_k*Xdp*sin(d_v_k)*cos(d_v_k));
         W(2) = Eqprime - Eqprime_k - dt/Td0/2.*(Eqe + Eqe_k - (Eqprime + Eqprime_k)*Xd/Xdprime
@@ -421,7 +425,7 @@ struct Trapeze {
         I(0,0) = -dt/2.;
         I(0,1) = 1.;
 
-        I(1,0) = dt/Ty/2.*Pd + 1.;
+        I(1,0) = dt/Ty/2.*e.Pd + 1.;
         I(1,1) = dt/Ty/2.*omega_nom*(Eqprime*U/Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v));
         I(1,2) = dt/Ty/2.*omega_nom*U/Xdprime*sin(d_v);
         I(1,10) = -I(1,1);

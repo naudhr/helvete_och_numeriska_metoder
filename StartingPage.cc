@@ -7,7 +7,8 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QLineEdit>
-#include <QThread>
+#include <QLabel>
+#include <QDoubleValidator>
 #include <qwt6/qwt_plot.h>
 #include <qwt6/qwt_plot_curve.h>
 #include <qwt6/qwt_legend.h>
@@ -18,18 +19,123 @@
 
 StartingPage::StartingPage() : QWidget()
 {
+    validator = new QDoubleValidator(this);
+
     auto reg = new QHBoxLayout;
+    reg->addWidget(new QLabel("Regulator parameters:",this));
+    reg->addStretch(1);
+    reg->addWidget(new QLabel("K0f:",this));
+    reg->addWidget(K0f = new QLineEdit("10",this));
+    K0f->setValidator(validator);
+    reg->addStretch(1);
+    reg->addWidget(new QLabel("K1f:",this));
+    reg->addWidget(K1f = new QLineEdit("0.5",this));
+    K1f->setValidator(validator);
+    reg->addStretch(1);
+    reg->addWidget(new QLabel("Ur0:",this));
+    reg->addWidget(Ur0 = new QLineEdit("1.05",this));
+    Ur0->setValidator(validator);
+    reg->addStretch(1);
+    reg->addWidget(new QLabel("K0u:",this));
+    reg->addWidget(K0u = new QLineEdit("50",this));
+    K0u->setValidator(validator);
+    reg->addStretch(1);
+    reg->addWidget(new QLabel("K1u:",this));
+    reg->addWidget(K1u = new QLineEdit("3.6",this));
+    K1u->setValidator(validator);
+
     auto eqv = new QHBoxLayout;
+    eqv->addWidget(new QLabel("Equivalent circuit parameters:",this));
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("Y11:",this));
+    eqv->addWidget(Y11 = new QLineEdit("0.496",this));
+    Y11->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("Y12:",this));
+    eqv->addWidget(Y12 = new QLineEdit("0.532",this));
+    Y12->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("A11:",this));
+    eqv->addWidget(A11 = new QLineEdit("0.958",this));
+    A11->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("A12:",this));
+    eqv->addWidget(A12 = new QLineEdit("0.715",this));
+    A12->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("Pd:",this));
+    eqv->addWidget(Pd = new QLineEdit("5",this));
+    Pd->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("Y11em:",this));
+    eqv->addWidget(Y11em = new QLineEdit("0.35",this));
+    Y11em->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("Y12em:",this));
+    eqv->addWidget(Y12em = new QLineEdit("0.45",this));
+    Y12em->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("A11em:",this));
+    eqv->addWidget(A11em = new QLineEdit("0.9",this));
+    A11em->setValidator(validator);
+    eqv->addStretch(1);
+    eqv->addWidget(new QLabel("A12em:",this));
+    eqv->addWidget(A12em = new QLineEdit("0.3",this));
+    A12em->setValidator(validator);
+
     auto srt = new QHBoxLayout;
+    srt->addWidget(new QLabel("Initial values:",this));
+    srt->addStretch(1);
+    srt->addWidget(new QLabel("Delta0:",this));
+    srt->addWidget(Delta0 = new QLineEdit("1.365",this));
+    Delta0->setValidator(validator);
+    srt->addStretch(1);
+    srt->addWidget(new QLabel("Eqe0:",this));
+    srt->addWidget(Eqe0 = new QLineEdit("1.87",this));
+    Eqe0->setValidator(validator);
+    srt->addStretch(1);
+    srt->addWidget(new QLabel("Eqprime0:",this));
+    srt->addWidget(Eqprime0 = new QLineEdit("1.1",this));
+    Eqprime0->setValidator(validator);
+    srt->addStretch(1);
+    srt->addWidget(new QLabel("U0:",this));
+    srt->addWidget(U0 = new QLineEdit("1.059",this));
+    U0->setValidator(validator);
+    srt->addStretch(1);
+    srt->addWidget(new QLabel("V0:",this));
+    srt->addWidget(V0 = new QLineEdit("0.597",this));
+    V0->setValidator(validator);
+
     auto cpt = new QHBoxLayout;
+    cpt->addWidget(new QLabel("Computational parameters:",this));
+    cpt->addStretch(1);
+    cpt->addWidget(new QLabel("Tstart:",this));
+    cpt->addWidget(Tstart = new QLineEdit("0",this));
+    Tstart->setValidator(validator);
+    cpt->addStretch(1);
+    cpt->addWidget(new QLabel("Tstop:",this));
+    cpt->addWidget(Tstop = new QLineEdit("3",this));
+    Tstop->setValidator(validator);
+    cpt->addStretch(1);
+    cpt->addWidget(new QLabel("dt",this));
+    cpt->addWidget(dt = new QLineEdit("0.005",this));
+    dt->setValidator(validator);
+    cpt->addStretch(1);
+    cpt->addWidget(new QLabel("eps:",this));
+    cpt->addWidget(eps = new QLineEdit("0.005",this));
+    eps->setValidator(validator);
+    cpt->addStretch(1);
+    cpt->addWidget(new QLabel("max_iterations:",this));
+    cpt->addWidget(max_iterations = new QLineEdit("10",this));
+    max_iterations->setValidator(new QIntValidator(5,500,this));
 
     progress_bar_eiler = new QProgressBar(this);
-    progress_bar_eiler->setFormat("Eiler: %v");
+    progress_bar_eiler->setFormat("Eiler");
     progress_bar_eiler->setMinimum(0);
     progress_bar_eiler->setMaximum(1);
     progress_bar_eiler->setValue(0);
     progress_bar_trapeze = new QProgressBar(this);
-    progress_bar_trapeze->setFormat("Trapeze: %v");
+    progress_bar_trapeze->setFormat("Trapeze");
     progress_bar_trapeze->setMinimum(0);
     progress_bar_trapeze->setMaximum(1);
     progress_bar_trapeze->setValue(0);
@@ -114,11 +220,12 @@ StartingPage::StartingPage() : QWidget()
     progress_bar_trapeze->setVisible(true);
     connect(start_button, SIGNAL(clicked()), SLOT(start()));
     //start();
+    start_button->setFocus(Qt::TabFocusReason);
 }
 
 void StartingPage::start()
 {
-    start_button->setEnabled(false);
+    enable_everything(false);
 
     auto p = collect_params();
     auto n = (p.Tstop - p.Tstart)/p.dt;
@@ -127,7 +234,7 @@ void StartingPage::start()
 
     progress_bar_eiler->setMaximum(n);
     progress_bar_eiler->setValue(0);
-    progress_bar_eiler->setVisible(true);
+    progress_bar_eiler->setFormat("Eiler: %v");
 
     CalculusEiler e;//(p);
     connect(&e, SIGNAL(a_step_done()), SLOT(increment_eiler()));
@@ -145,7 +252,7 @@ void StartingPage::start()
 */
     progress_bar_trapeze->setMaximum(n);
     progress_bar_trapeze->setValue(0);
-    progress_bar_trapeze->setVisible(true);
+    progress_bar_trapeze->setFormat("Trapeze: %v");
 
     CalculusTrapeze t;
     connect(&t, SIGNAL(a_step_done()), SLOT(increment_trapeze()));
@@ -156,45 +263,48 @@ void StartingPage::start()
     plot->setVisible(true);
     plot->replot();
     zoom->setZoomBase();
-    start_button->setEnabled(true);
+
+    enable_everything(true);
 }
 
-bool StartingPage::if_all_fields_are_filled()
+void StartingPage::enable_everything(bool e)
 {
-    return true;
-}
-
-void StartingPage::change_params_reactor()
-{
-    start_button->setEnabled( if_all_fields_are_filled() );
+    K0f->setEnabled(e); K1f->setEnabled(e); Ur0->setEnabled(e); K0u->setEnabled(e); K1u->setEnabled(e);
+    Y11->setEnabled(e); Y12->setEnabled(e); A11->setEnabled(e); A12->setEnabled(e);
+    Y11em->setEnabled(e); Y12em->setEnabled(e); A11em->setEnabled(e); A12em->setEnabled(e); Pd->setEnabled(e);
+    Delta0->setEnabled(e); Eqe0->setEnabled(e); Eqprime0->setEnabled(e); U0->setEnabled(e); V0->setEnabled(e);
+    Tstart->setEnabled(e); Tstop->setEnabled(e); dt->setEnabled(e);
+    eps->setEnabled(e); max_iterations->setEnabled(e);
+    start_button->setEnabled(e);
 }
 
 Params StartingPage::collect_params()
 {
     Params p = {};
-    p.reg.K0f=10.;
-    p.reg.K1f=0.5;
-    p.reg.Ur0=1.05;
-    p.reg.K0u=50.;
-    p.reg.K1u=3.6;
-    p.repl.Y11=0.496;
-    p.repl.Y12=0.532;
-    p.repl.A11=0.958;
-    p.repl.A12=0.715;
-    p.repl.Y11em=0.35;
-    p.repl.Y12em=0.45;
-    p.repl.A11em=0.9;
-    p.repl.A12em=0.3;
-    p.start.Delta0=1.365;
-    p.start.Eqe0=1.87;
-    p.start.Eqprime0=1.1;
-    p.start.U0=1.059;
-    p.start.V0=0.597;
-    p.Tstart=0.;
-    p.Tstop=3.;
-    p.dt=0.005;
-    p.eps=0.005;
-    p.max_iterations=10;
+    p.reg.K0f = K0f->text().toDouble();
+    p.reg.K1f = K1f->text().toDouble();
+    p.reg.Ur0 = Ur0->text().toDouble();
+    p.reg.K0u = K0u->text().toDouble();
+    p.reg.K1u = K1u->text().toDouble();
+    p.repl.Pd = Pd->text().toDouble();
+    p.repl.Y11 = Y11->text().toDouble();
+    p.repl.Y12 = Y12->text().toDouble();
+    p.repl.A11 = A11->text().toDouble();
+    p.repl.A12 = A12->text().toDouble();
+    p.repl.Y11em = Y11em->text().toDouble();
+    p.repl.Y12em = Y12em->text().toDouble();
+    p.repl.A11em = A11em->text().toDouble();
+    p.repl.A12em = A12em->text().toDouble();
+    p.start.Delta0 = Delta0->text().toDouble();
+    p.start.Eqe0 = Eqe0->text().toDouble();
+    p.start.Eqprime0 = Eqprime0->text().toDouble();
+    p.start.U0 = U0->text().toDouble();
+    p.start.V0 = V0->text().toDouble();
+    p.Tstart = Tstart->text().toDouble();
+    p.Tstop = Tstop->text().toDouble();
+    p.dt = dt->text().toDouble();
+    p.eps = eps->text().toDouble();
+    p.max_iterations = max_iterations->text().toUInt();
     return p;
 }
 

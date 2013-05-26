@@ -7,7 +7,7 @@ struct Params
         double K0f, K1f, Ur0, K0u, K1u;
     } reg;
     struct Repl {
-        double Y11, Y12, A11, A12, Y11em, Y12em, A11em, A12em, P0f;
+        double Y11, Y12, A11, A12, Y11em, Y12em, A11em, A12em, Pd;
     } repl;
     struct Start {
         double Delta0, Eqe0, Eqprime0, U0, V0;
