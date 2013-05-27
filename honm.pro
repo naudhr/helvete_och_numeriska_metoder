@@ -5,7 +5,9 @@ TARGET = honm
 DEPENDPATH += .
 INCLUDEPATH += .
 
-CONFIG += qwt
+CONFIG += qwt release
+CONFIG -= debug
+
 
 # Input
 HEADERS += MainWindow.h StartingPage.h params.h Calculus.h
