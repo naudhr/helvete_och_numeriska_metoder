@@ -137,13 +137,13 @@ StartingPage::StartingPage() : QWidget()
     progress_bar_eiler->setFormat("Eiler");
     progress_bar_eiler->setMinimum(0);
     progress_bar_eiler->setMaximum(1);
-    //progress_bar_eiler->setValue(0);
+    progress_bar_eiler->setValue(0);
     progress_bar_eiler->setEnabled(false);
     progress_bar_trapeze = new QProgressBar(this);
     progress_bar_trapeze->setFormat("Trapeze");
     progress_bar_trapeze->setMinimum(0);
     progress_bar_trapeze->setMaximum(1);
-    //progress_bar_trapeze->setValue(0);
+    progress_bar_trapeze->setValue(0);
     progress_bar_trapeze->setEnabled(false);
     QHBoxLayout* prb = new QHBoxLayout;
     prb->addWidget(enable_eiler);
