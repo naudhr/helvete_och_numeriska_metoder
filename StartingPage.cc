@@ -55,11 +55,11 @@ StartingPage::StartingPage() : QWidget()
     eqv->addWidget(Y12 = new QLineEdit("0.532",this));
     Y12->setValidator(validator);
     eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A11:",this));
+    eqv->addWidget(new QLabel("A11 (degrees):",this));
     eqv->addWidget(A11 = new QLineEdit("0.958",this));
     A11->setValidator(validator);
     eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A12:",this));
+    eqv->addWidget(new QLabel("A12 (degrees):",this));
     eqv->addWidget(A12 = new QLineEdit("0.715",this));
     A12->setValidator(validator);
     eqv->addStretch(1);
@@ -75,11 +75,11 @@ StartingPage::StartingPage() : QWidget()
     eqv->addWidget(Y12em = new QLineEdit("0.45",this));
     Y12em->setValidator(validator);
     eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A11em:",this));
+    eqv->addWidget(new QLabel("A11em (degrees):",this));
     eqv->addWidget(A11em = new QLineEdit("0.9",this));
     A11em->setValidator(validator);
     eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A12em:",this));
+    eqv->addWidget(new QLabel("A12em (degrees):",this));
     eqv->addWidget(A12em = new QLineEdit("0.3",this));
     A12em->setValidator(validator);
 
@@ -340,12 +340,12 @@ Params StartingPage::collect_params()
     p.repl.Pd = Pd->text().toDouble();
     p.repl.Y11 = Y11->text().toDouble();
     p.repl.Y12 = Y12->text().toDouble();
-    p.repl.A11 = A11->text().toDouble();
-    p.repl.A12 = A12->text().toDouble();
+    p.repl.A11 = A11->text().toDouble() * 3.1415926 / 180;
+    p.repl.A12 = A12->text().toDouble() * 3.1415926 / 180;
     p.repl.Y11em = Y11em->text().toDouble();
     p.repl.Y12em = Y12em->text().toDouble();
-    p.repl.A11em = A11em->text().toDouble();
-    p.repl.A12em = A12em->text().toDouble();
+    p.repl.A11em = A11em->text().toDouble() * 3.1415926 / 180;
+    p.repl.A12em = A12em->text().toDouble() * 3.1415926 / 180;
     p.start.Delta0 = Delta0->text().toDouble();
     p.start.Eqe0 = Eqe0->text().toDouble();
     p.start.Eqprime0 = Eqprime0->text().toDouble();

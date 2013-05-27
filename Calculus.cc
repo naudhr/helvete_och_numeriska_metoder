@@ -290,7 +290,7 @@ struct Eiler {
 
         I(4,4) = (dt/Tg)*reg.K1u/reg.K0u/Tu;
         I(4,5) = (dt/Tg) + 1.;
-        I(4,11) = I(4,4)*reg.K0u;
+        I(4,11) = (dt/Tg)*reg.K1u/Tu;
 
         I(5,6) = (dt/Tphi) + 1.;
         I(5,10) = -(dt/Tphi);
