@@ -1,0 +1,8 @@
+*~
+*.org
+.*.swp
+Makefile
+moc_*
+*.obj
+*.o
+honm
