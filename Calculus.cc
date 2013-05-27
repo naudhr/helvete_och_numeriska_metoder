@@ -2,7 +2,7 @@
 #include "params.h"
 #include <QDebug>
 #include <cassert>
-#include <iostream>
+#include <cmath>
 
 // the Trapeze and Eiler matrix and vector statements are fully and trully
 // Chich-Pych's intellectual property and thus are subjects of some kinds
@@ -83,13 +83,13 @@ class AMatrix
     }
     void normalise_row(size_t i) {
         assert(i < 12);
-        const auto denominator = data[i][i];
+        const double denominator = data[i][i];
         for(size_t c=0; c<13; c++)
             data[i][c] /= denominator;
     }
     void subst_row_mult(size_t i, size_t j) {
         assert(i < 12 and j < 12);
-        const auto multtiplier = data[i][j];
+        const double multtiplier = data[i][j];
         for(size_t c=0; c<13; c++)
             data[i][c] -= data[j][c]*multtiplier;
     }
@@ -191,21 +191,21 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
-constexpr double Pt0 = 1.;
-constexpr double T = 1.;
-constexpr double Ty = 5.1;
-constexpr double Tu = 0.05;
-constexpr double Tg = 0.02;
-constexpr double Te = 0.03;
-constexpr double Tf = 0.05;
-constexpr double Tphi = 0.05;
-constexpr double Td0 = 5.87;
-constexpr double omega_nom = 18000.;
-constexpr double Xdprime = 0.207;
-constexpr double Xd = 1.364;
-constexpr double Xdp = (Xd-Xdprime)/Xd/Xdprime;
-constexpr double Eqenom = 1.87;
-constexpr double Uc = 1.;
+const static double Pt0 = 1.;
+const static double T = 1.;
+const static double Ty = 5.1;
+const static double Tu = 0.05;
+const static double Tg = 0.02;
+const static double Te = 0.03;
+const static double Tf = 0.05;
+const static double Tphi = 0.05;
+const static double Td0 = 5.87;
+const static double omega_nom = 18000.;
+const static double Xdprime = 0.207;
+const static double Xd = 1.364;
+const static double Xdp = (Xd-Xdprime)/Xd/Xdprime;
+const static double Eqenom = 1.87;
+const static double Uc = 1.;
 
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
@@ -217,7 +217,7 @@ Equiv equiv_params(double t, const X& x, const Params& p, Equiv e)
     e.A11 = t<0.12 ? p.repl.A11em : p.repl.A11;
     e.A12 = t<0.12 ? p.repl.A12em : p.repl.A12;
     e.Pd = p.repl.Pd;
-    const auto U = x(11);
+    const double U = x(11);
     if(U < 0.85) e.Upphi = 2.*Eqenom - (2.*Eqenom - p.start.Eqe0)*std::exp(-p.dt/Te);
     if(U > 0.9)  e.Upphi = 0.;
     return e;
@@ -230,19 +230,19 @@ struct Eiler {
 
     static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Reg& reg, const Equiv& e)
     {
-        const auto domega_k = x_k_1(0);   const auto domega = x_i_1(0);
-        const auto delta_k = x_k_1(1);    const auto delta = x_i_1(1);
-        const auto Eqprime_k = x_k_1(2);  const auto Eqprime = x_i_1(2);
-        const auto Eqe_k = x_k_1(3);      const auto Eqe = x_i_1(3);
-        const auto X3_k = x_k_1(4);       const auto X3 = x_i_1(4);
-        const auto X4_k = x_k_1(5);       const auto X4 = x_i_1(5);
-        const auto X5_k = x_k_1(6);       const auto X5 = x_i_1(6);
-        const auto X6_k = x_k_1(7);       const auto X6 = x_i_1(7);
-        const auto X8_k = x_k_1(8);       const auto X8 = x_i_1(8);
-        const auto X9_k = x_k_1(9);       const auto X9 = x_i_1(9);
-                                          const auto V = x_i_1(10);
-                                          const auto U = x_i_1(11);
-        const auto d_v = delta-V;
+        const double domega_k = x_k_1(0);   const double domega = x_i_1(0);
+        const double delta_k = x_k_1(1);    const double delta = x_i_1(1);
+        const double Eqprime_k = x_k_1(2);  const double Eqprime = x_i_1(2);
+        const double Eqe_k = x_k_1(3);      const double Eqe = x_i_1(3);
+        const double X3_k = x_k_1(4);       const double X3 = x_i_1(4);
+        const double X4_k = x_k_1(5);       const double X4 = x_i_1(5);
+        const double X5_k = x_k_1(6);       const double X5 = x_i_1(6);
+        const double X6_k = x_k_1(7);       const double X6 = x_i_1(7);
+        const double X8_k = x_k_1(8);       const double X8 = x_i_1(8);
+        const double X9_k = x_k_1(9);       const double X9 = x_i_1(9);
+                                            const double V = x_i_1(10);
+                                            const double U = x_i_1(11);
+        const double d_v = delta-V;
 
         X W;
         W(0) = delta - delta_k - dt*domega;
@@ -264,11 +264,11 @@ struct Eiler {
         IMatrix I;
         //I = boost::numeric::ublas::zero_matrix<double>(12,12);
 
-        const auto delta = x_i_1(1);
-        const auto Eqprime = x_i_1(2);
-        const auto V = x_i_1(10);
-        const auto U = x_i_1(11);
-        const auto d_v = delta-V;
+        const double delta = x_i_1(1);
+        const double Eqprime = x_i_1(2);
+        const double V = x_i_1(10);
+        const double U = x_i_1(11);
+        const double d_v = delta-V;
 
         I(0,0) = -dt;
         I(0,1) = 1.;
@@ -334,7 +334,8 @@ struct Eiler {
 
 static AnswerItem make_answer_item(double t, const X& x)
 {
-    const AnswerItem i = { .time=t, .delta=x(1), .omega=x(0), .Eqe=x(3), .Eqprime=x(2), .V=x(10), .U=x(11) };
+    AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
+    i.time=t, i.delta=x(1), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
     return i;
 }
 
@@ -352,7 +353,7 @@ QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
     X x = make_x0(p);
     a.push_back( make_answer_item(p.Tstart,x) );
 
-    const Equiv e = { .Upphi = 0. };
+    const Equiv e = { 0., 0., 0., 0., 0., 0. };
     for(double t=p.Tstart+p.dt; t<p.Tstop; t+=p.dt) try
     {
         x = solve_newton<Eiler>(x, p, equiv_params(t,x,p,e));
@@ -378,19 +379,19 @@ struct Trapeze {
 
     static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Reg& reg, const Equiv& e)
     {
-        const auto domega_k = x_k_1(0);   const auto domega = x_i_1(0);
-        const auto delta_k = x_k_1(1);    const auto delta = x_i_1(1);
-        const auto Eqprime_k = x_k_1(2);  const auto Eqprime = x_i_1(2);
-        const auto Eqe_k = x_k_1(3);      const auto Eqe = x_i_1(3);
-        const auto X3_k = x_k_1(4);       const auto X3 = x_i_1(4);
-        const auto X4_k = x_k_1(5);       const auto X4 = x_i_1(5);
-        const auto X5_k = x_k_1(6);       const auto X5 = x_i_1(6);
-        const auto X6_k = x_k_1(7);       const auto X6 = x_i_1(7);
-        const auto X8_k = x_k_1(8);       const auto X8 = x_i_1(8);
-        const auto X9_k = x_k_1(9);       const auto X9 = x_i_1(9);
-        const auto V_k = x_k_1(10);       const auto V = x_i_1(10);
-        const auto U_k = x_k_1(11);       const auto U = x_i_1(11);
-        const auto d_v_k = delta_k-V_k;   const auto d_v = delta-V;
+        const double domega_k = x_k_1(0);   const double domega = x_i_1(0);
+        const double delta_k = x_k_1(1);    const double delta = x_i_1(1);
+        const double Eqprime_k = x_k_1(2);  const double Eqprime = x_i_1(2);
+        const double Eqe_k = x_k_1(3);      const double Eqe = x_i_1(3);
+        const double X3_k = x_k_1(4);       const double X3 = x_i_1(4);
+        const double X4_k = x_k_1(5);       const double X4 = x_i_1(5);
+        const double X5_k = x_k_1(6);       const double X5 = x_i_1(6);
+        const double X6_k = x_k_1(7);       const double X6 = x_i_1(7);
+        const double X8_k = x_k_1(8);       const double X8 = x_i_1(8);
+        const double X9_k = x_k_1(9);       const double X9 = x_i_1(9);
+        const double V_k = x_k_1(10);       const double V = x_i_1(10);
+        const double U_k = x_k_1(11);       const double U = x_i_1(11);
+        const double d_v_k = delta_k-V_k;   const double d_v = delta-V;
 
         X W;
         W(0) = delta - delta_k - dt/2.*(domega + domega_k);
@@ -416,11 +417,11 @@ struct Trapeze {
         IMatrix I;
         //I = boost::numeric::ublas::zero_matrix<double>(12,12);
 
-        const auto delta = x_i_1(1);
-        const auto Eqprime = x_i_1(2);
-        const auto V = x_i_1(10);
-        const auto U = x_i_1(11);
-        const auto d_v = delta-V;
+        const double delta = x_i_1(1);
+        const double Eqprime = x_i_1(2);
+        const double V = x_i_1(10);
+        const double U = x_i_1(11);
+        const double d_v = delta-V;
 
         I(0,0) = -dt/2.;
         I(0,1) = 1.;
@@ -491,7 +492,7 @@ QVector<AnswerItem> CalculusTrapeze::doWork(const Params& p)
     X x = make_x0(p);
     a.push_back( make_answer_item(p.Tstart,x) );
 
-    const Equiv e = { .Upphi = 0. };
+    const Equiv e = { 0., 0., 0., 0., 0., 0. };
     for(double t=p.Tstart+p.dt; t<p.Tstop; t+=p.dt) try
     {
         x = solve_newton<Trapeze>(x, p, equiv_params(t,x,p,e));

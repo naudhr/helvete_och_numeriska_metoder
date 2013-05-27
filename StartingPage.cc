@@ -7,21 +7,21 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QLineEdit>
+#include <QCheckBox>
 #include <QLabel>
 #include <QDoubleValidator>
-#include <qwt6/qwt_plot.h>
-#include <qwt6/qwt_plot_curve.h>
-#include <qwt6/qwt_legend.h>
-#include <qwt6/qwt_plot_zoomer.h>
-#include <qwt6/qwt_plot_grid.h>
-//#include <qwt6/qwt_plot_magnifier.h>
+#include <qwt_plot.h>
+#include <qwt_plot_curve.h>
+#include <qwt_legend.h>
+#include <qwt_plot_zoomer.h>
+#include <qwt_plot_grid.h>
 
 
 StartingPage::StartingPage() : QWidget()
 {
     validator = new QDoubleValidator(this);
 
-    auto reg = new QHBoxLayout;
+    QHBoxLayout* reg = new QHBoxLayout;
     reg->addWidget(new QLabel("Regulator parameters:",this));
     reg->addStretch(1);
     reg->addWidget(new QLabel("K0f:",this));
@@ -44,7 +44,7 @@ StartingPage::StartingPage() : QWidget()
     reg->addWidget(K1u = new QLineEdit("3.6",this));
     K1u->setValidator(validator);
 
-    auto eqv = new QHBoxLayout;
+    QHBoxLayout* eqv = new QHBoxLayout;
     eqv->addWidget(new QLabel("Equivalent circuit parameters:",this));
     eqv->addStretch(1);
     eqv->addWidget(new QLabel("Y11:",this));
@@ -83,7 +83,7 @@ StartingPage::StartingPage() : QWidget()
     eqv->addWidget(A12em = new QLineEdit("0.3",this));
     A12em->setValidator(validator);
 
-    auto srt = new QHBoxLayout;
+    QHBoxLayout* srt = new QHBoxLayout;
     srt->addWidget(new QLabel("Initial values:",this));
     srt->addStretch(1);
     srt->addWidget(new QLabel("Delta0:",this));
@@ -106,7 +106,7 @@ StartingPage::StartingPage() : QWidget()
     srt->addWidget(V0 = new QLineEdit("0.597",this));
     V0->setValidator(validator);
 
-    auto cpt = new QHBoxLayout;
+    QHBoxLayout* cpt = new QHBoxLayout;
     cpt->addWidget(new QLabel("Computational parameters:",this));
     cpt->addStretch(1);
     cpt->addWidget(new QLabel("Tstart:",this));
@@ -129,84 +129,94 @@ StartingPage::StartingPage() : QWidget()
     cpt->addWidget(max_iterations = new QLineEdit("10",this));
     max_iterations->setValidator(new QIntValidator(5,500,this));
 
+    enable_eiler = new QCheckBox(this);
+    enable_eiler->setChecked(false);
+    enable_trapeze = new QCheckBox(this);
+    enable_trapeze->setChecked(false);
     progress_bar_eiler = new QProgressBar(this);
     progress_bar_eiler->setFormat("Eiler");
     progress_bar_eiler->setMinimum(0);
     progress_bar_eiler->setMaximum(1);
-    progress_bar_eiler->setValue(0);
+    //progress_bar_eiler->setValue(0);
+    progress_bar_eiler->setEnabled(false);
     progress_bar_trapeze = new QProgressBar(this);
     progress_bar_trapeze->setFormat("Trapeze");
     progress_bar_trapeze->setMinimum(0);
     progress_bar_trapeze->setMaximum(1);
-    progress_bar_trapeze->setValue(0);
-    auto prb = new QHBoxLayout;
+    //progress_bar_trapeze->setValue(0);
+    progress_bar_trapeze->setEnabled(false);
+    QHBoxLayout* prb = new QHBoxLayout;
+    prb->addWidget(enable_eiler);
     prb->addWidget(progress_bar_eiler);
+    prb->addSpacing(30);
+    prb->addWidget(enable_trapeze);
     prb->addWidget(progress_bar_trapeze);
 
     start_button = new QPushButton("Start",this);
+    start_button->setEnabled(false);
 
     plot = new QwtPlot(this);
     curve_eiler_Delta = new QwtPlotCurve("Delta Eiler");
     curve_eiler_Delta->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_eiler_Delta->setPen(QPen(QColor(160,0,210)));
     curve_eiler_Delta->setVisible(false);
-    curve_eiler_Delta->attach(plot);
+    //curve_eiler_Delta->attach(plot);
     curve_eiler_Omega = new QwtPlotCurve("Omega Eiler");
     curve_eiler_Omega->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_eiler_Omega->setPen(QPen(QColor(210,0,0)));
     curve_eiler_Omega->setVisible(false);
-    curve_eiler_Omega->attach(plot);
+    //curve_eiler_Omega->attach(plot);
     curve_eiler_Eqe = new QwtPlotCurve("Eqe Eiler");
     curve_eiler_Eqe->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_eiler_Eqe->setPen(QPen(QColor(5,205,0)));
     curve_eiler_Eqe->setVisible(false);
-    curve_eiler_Eqe->attach(plot);
+    //curve_eiler_Eqe->attach(plot);
     curve_eiler_Eqprime = new QwtPlotCurve("Eqprime Eiler");
     curve_eiler_Eqprime->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_eiler_Eqprime->setPen(QPen(QColor(210,120,0)));
     curve_eiler_Eqprime->setVisible(false);
-    curve_eiler_Eqprime->attach(plot);
+    //curve_eiler_Eqprime->attach(plot);
     curve_eiler_U = new QwtPlotCurve("U Eiler");
     curve_eiler_U->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_eiler_U->setPen(QPen(Qt::black));
     curve_eiler_U->setVisible(false);
-    curve_eiler_U->attach(plot);
+    //curve_eiler_U->attach(plot);
 
     curve_trapeze_Delta = new QwtPlotCurve("Delta Trapeze");
     curve_trapeze_Delta->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_trapeze_Delta->setPen(QPen(QColor(210,50,255)));
     curve_trapeze_Delta->setVisible(false);
-    curve_trapeze_Delta->attach(plot);
+    //curve_trapeze_Delta->attach(plot);
     curve_trapeze_Omega = new QwtPlotCurve("Omega Trapeze");
     curve_trapeze_Omega->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_trapeze_Omega->setPen(QPen(QColor(255,45,45)));
     curve_trapeze_Omega->setVisible(false);
-    curve_trapeze_Omega->attach(plot);
+    //curve_trapeze_Omega->attach(plot);
     curve_trapeze_Eqe = new QwtPlotCurve("Eqe Trapeze");
     curve_trapeze_Eqe->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_trapeze_Eqe->setPen(QPen(QColor(50,255,50)));
     curve_trapeze_Eqe->setVisible(false);
-    curve_trapeze_Eqe->attach(plot);
+    //curve_trapeze_Eqe->attach(plot);
     curve_trapeze_Eqprime = new QwtPlotCurve("Eqprime Trapeze");
     curve_trapeze_Eqprime->setRenderHint(QwtPlotItem::RenderAntialiased);
     curve_trapeze_Eqprime->setPen(QPen(QColor(255,160,50)));
     curve_trapeze_Eqprime->setVisible(false);
-    curve_trapeze_Eqprime->attach(plot);
+    //curve_trapeze_Eqprime->attach(plot);
 
-    auto legend = new QwtLegend;
+    QwtLegend* legend = new QwtLegend;
     legend->setItemMode(QwtLegend::ReadOnlyItem);
     plot->insertLegend(legend,QwtPlot::TopLegend);
 
     zoom = new QwtPlotZoomer(plot->canvas());
     zoom->setRubberBandPen(QPen(Qt::white));
 
-    auto grid = new QwtPlotGrid;
+    QwtPlotGrid* grid = new QwtPlotGrid;
     grid->enableXMin(true);
     grid->setMajPen(QPen(Qt::black,0,Qt::DotLine));
     grid->setMinPen(QPen(Qt::gray,0,Qt::DotLine));
     grid->attach(plot);
 
-    auto l = new QVBoxLayout(this);
+    QVBoxLayout* l = new QVBoxLayout(this);
     l->addLayout(reg);
     l->addLayout(eqv);
     l->addLayout(srt);
@@ -219,27 +229,65 @@ StartingPage::StartingPage() : QWidget()
     progress_bar_eiler->setVisible(true);
     progress_bar_trapeze->setVisible(true);
     connect(start_button, SIGNAL(clicked()), SLOT(start()));
-    //start();
-    start_button->setFocus(Qt::TabFocusReason);
+
+    connect(enable_eiler, SIGNAL(clicked()), SLOT(wanna_eiler()));
+    connect(enable_trapeze, SIGNAL(clicked()), SLOT(wanna_trapeze()));
+    //start_button->setFocus(Qt::TabFocusReason);
+}
+
+StartingPage::~StartingPage()
+{
+    if(not curve_eiler_U->plot() )  delete curve_eiler_U;
+    if(not curve_eiler_Delta->plot() )  delete curve_eiler_Delta;
+    if(not curve_eiler_Omega->plot() )  delete curve_eiler_Omega;
+    if(not curve_eiler_Eqe->plot() )  delete curve_eiler_Eqe;
+    if(not curve_eiler_Eqprime->plot() )  delete curve_eiler_Eqprime;
+    if(not curve_trapeze_Delta->plot() )  delete curve_trapeze_Delta;
+    if(not curve_trapeze_Omega->plot() )  delete curve_trapeze_Omega;
+    if(not curve_trapeze_Eqe->plot() )  delete curve_trapeze_Eqe;
+    if(not curve_trapeze_Eqprime->plot() )  delete curve_trapeze_Eqprime;
+}
+
+void StartingPage::wanna_eiler()
+{
+    progress_bar_eiler->setEnabled( enable_eiler->isChecked() );
+    curve_eiler_U->attach( enable_eiler->isChecked() ? plot : NULL );
+    curve_eiler_Delta->attach( enable_eiler->isChecked() ? plot : NULL );
+    curve_eiler_Omega->attach( enable_eiler->isChecked() ? plot : NULL );
+    curve_eiler_Eqe->attach( enable_eiler->isChecked() ? plot : NULL );
+    curve_eiler_Eqprime->attach( enable_eiler->isChecked() ? plot : NULL );
+    start_button->setEnabled( enable_eiler->isChecked() or enable_trapeze->isChecked() );
+}
+
+void StartingPage::wanna_trapeze()
+{
+    progress_bar_trapeze->setEnabled( enable_trapeze->isChecked() );
+    curve_trapeze_Delta->attach( enable_trapeze->isChecked() ? plot : NULL );
+    curve_trapeze_Omega->attach( enable_trapeze->isChecked() ? plot : NULL );
+    curve_trapeze_Eqe->attach( enable_trapeze->isChecked() ? plot : NULL );
+    curve_trapeze_Eqprime->attach( enable_trapeze->isChecked() ? plot : NULL );
+    start_button->setEnabled( enable_eiler->isChecked() or enable_trapeze->isChecked() );
 }
 
 void StartingPage::start()
 {
     enable_everything(false);
 
-    auto p = collect_params();
-    auto n = (p.Tstop - p.Tstart)/p.dt;
+    const Params p = collect_params();
+    const size_t n = (p.Tstop - p.Tstart)/p.dt;
 
     plot->setAxisScale(QwtPlot::xBottom,p.Tstart-p.dt,p.Tstop+p.dt);
 
-    progress_bar_eiler->setMaximum(n);
-    progress_bar_eiler->setValue(0);
-    progress_bar_eiler->setFormat("Eiler: %v");
+    if( enable_eiler->isChecked() )
+    {
+        progress_bar_eiler->setMaximum(n);
+        progress_bar_eiler->setValue(0);
+        progress_bar_eiler->setFormat("Eiler: %v");
 
-    CalculusEiler e;//(p);
-    connect(&e, SIGNAL(a_step_done()), SLOT(increment_eiler()));
-    //connect(&e, SIGNAL(answer(Answer)), this, SLOT(plot_answer(Answer)));
-    plot_answer_eiler(e.doWork(p));
+        CalculusEiler e;
+        connect(&e, SIGNAL(a_step_done()), SLOT(increment_eiler()));
+        plot_answer_eiler(e.doWork(p));
+    }
 /*
     auto e = new CalculusEiler(p);
     auto t = new QThread(this);
@@ -250,13 +298,16 @@ void StartingPage::start()
     e->moveToThread(t);
     t->start();
 */
-    progress_bar_trapeze->setMaximum(n);
-    progress_bar_trapeze->setValue(0);
-    progress_bar_trapeze->setFormat("Trapeze: %v");
+    if( enable_trapeze->isChecked() )
+    {
+        progress_bar_trapeze->setMaximum(n);
+        progress_bar_trapeze->setValue(0);
+        progress_bar_trapeze->setFormat("Trapeze: %v");
 
-    CalculusTrapeze t;
-    connect(&t, SIGNAL(a_step_done()), SLOT(increment_trapeze()));
-    plot_answer_trapeze(t.doWork(p));
+        CalculusTrapeze t;
+        connect(&t, SIGNAL(a_step_done()), SLOT(increment_trapeze()));
+        plot_answer_trapeze(t.doWork(p));
+    }
 
     plot->setAxisAutoScale(QwtPlot::xBottom);
     plot->setAxisAutoScale(QwtPlot::yLeft);
@@ -331,7 +382,7 @@ void StartingPage::plot_answer_eiler(const QVector<AnswerItem> ans)
     double min_delta = 0., min_omega = 0., min_Eqprime = 0., min_Eqe = 0.;
     for(int i=0; i<ans.size(); i++)
     {
-        const auto a = ans.at(i);
+        const AnswerItem& a = ans.at(i);
         data_delta[i] = QPointF(a.time, a.delta);
         data_omega[i] = QPointF(a.time, a.omega);
         data_eqp[i] = QPointF(a.time, a.Eqprime);
@@ -376,7 +427,7 @@ void StartingPage::plot_answer_trapeze(const QVector<AnswerItem> ans)
     double min_delta = 0., min_omega = 0., min_Eqprime = 0., min_Eqe = 0.;
     for(int i=0; i<ans.size(); i++)
     {
-        const auto a = ans.at(i);
+        const AnswerItem& a = ans.at(i);
         data_delta[i] = QPointF(a.time, a.delta);
         data_omega[i] = QPointF(a.time, a.omega);
         data_eqp[i] = QPointF(a.time, a.Eqprime);

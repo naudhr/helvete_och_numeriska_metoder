@@ -8,8 +8,7 @@ class QDoubleValidator;
 class QProgressBar;
 class QPushButton;
 class QLineEdit;
-//struct Params;
-//struct AnswerItem;
+class QCheckBox;
 class QwtPlot;
 class QwtPlotCurve;
 class QwtPlotZoomer;
@@ -32,6 +31,8 @@ class StartingPage : public QWidget
     QwtPlotCurve* curve_trapeze_Eqprime;
     QPushButton* start_button;
 
+    QCheckBox* enable_eiler;
+    QCheckBox* enable_trapeze;
     QProgressBar* progress_bar_eiler;
     QProgressBar* progress_bar_trapeze;
 
@@ -50,12 +51,14 @@ class StartingPage : public QWidget
     void enable_everything(bool);
     void increment_eiler();
     void increment_trapeze();
-    //void plot_answer(Answer);
+    void wanna_eiler();
+    void wanna_trapeze();
     void plot_answer_eiler(const QVector<AnswerItem> ans);
     void plot_answer_trapeze(const QVector<AnswerItem> ans);
   signals:
   public:
     StartingPage();
+    ~StartingPage();
 };
 
 #endif // __STARTING_PAGE_H_
