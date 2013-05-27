@@ -75,11 +75,17 @@ class AMatrix
         assert(r < 12 and c < 13);
         return data[r][c];
     }
-    void swap_rows(size_t i, size_t j) {
-        assert(i < 12 and j < 12);
-        if(i != j)
-            for(size_t c=0; c<13; c++)
-                std::swap(data[i][c], data[j][c]);
+    void ensure_non_zero_diagonal_elem(size_t n) {
+	    assert(n < 12);
+        if(std::abs(data[n][n]) > 1e-100)
+            return;
+        for(size_t i=n+1; i<12; i++)
+            if(std::abs(data[i][n]) > 1e-100)
+            {
+                for(size_t c=0; c<13; c++)
+                    std::swap(data[i][c], data[n][c]);
+                return;
+            }
     }
     void normalise_row(size_t i) {
         assert(i < 12);
@@ -123,22 +129,6 @@ static X make_x0(const Params& p)
 
 //-----------------------------------------------------------------------
 
-static inline bool non_zero(const AMatrix& A, size_t i, size_t j) {  return std::abs(A(i,j)) > 1e-100;  }
-
-static void ensure_non_zero_diagonal_elem(AMatrix& A, size_t n)
-{
-    if(non_zero(A,n,n))
-        return;
-    for(size_t i=n+1; i<12/*A.size1()*/; i++)
-        if(non_zero(A,i,n))
-        {
-            A.swap_rows(i,n);
-            return;
-        }
-}
-
-//-----------------------------------------------------------------------
-
 X solve_gauss(const IMatrix& I, const X& W)
 {
     AMatrix A(I,W);
@@ -148,7 +138,7 @@ X solve_gauss(const IMatrix& I, const X& W)
     // brutegauss LASes.
     for(size_t i=0; i<12; i++)
     {
-        ensure_non_zero_diagonal_elem(A,i);
+        A.ensure_non_zero_diagonal_elem(i);
         A.normalise_row(i);
         for(size_t j=i+1; j<12; j++)
             A.subst_row_mult(j,i);
