@@ -208,7 +208,7 @@ Equiv equiv_params(double t, const X& x, const Params& p, Equiv e)
     e.A12 = t<0.12 ? p.repl.A12em : p.repl.A12;
     e.Pd = p.repl.Pd;
     const double U = x(11);
-    if(U < 0.85) e.Upphi = 2.*Eqenom - (2.*Eqenom - p.start.Eqe0)*std::exp(-p.dt/Te);
+    if(U < 0.85) e.Upphi = 2.*Eqenom - (2.*Eqenom - p.start.Eqe0)*std::exp(-t/Te);
     if(U > 0.9)  e.Upphi = 0.;
     return e;
 }
