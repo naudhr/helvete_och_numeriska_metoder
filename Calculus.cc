@@ -169,11 +169,11 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
     for(size_t max_iterations=p.max_iterations; max_iterations; max_iterations--)
     {
         const X W = Method::calculate_W(x_k_1, x_i_1, p.dt, p.reg, e);
-        if(W.less_then_eps(p.eps))
-            return x_i_1;
         const IMatrix I = Method::calculate_I(x_i_1, p.dt, p.reg, e);
         const X delta_x_i = solve_gauss(I, W);
         x_i_1 += delta_x_i;
+        if(W.less_then_eps(p.eps) and delta_x_i.less_then_eps(p.eps))
+            return x_i_1;
     }
     throw NewtonDoesNotConverge();
 }
