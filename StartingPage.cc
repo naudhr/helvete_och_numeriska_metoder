@@ -17,117 +17,65 @@
 #include <qwt_plot_grid.h>
 
 
+static QLineEdit* add_double_input(QBoxLayout* layout, const char* label, const char* value, QValidator* validator)
+{
+    layout->addStretch(1);
+    layout->addWidget(new QLabel(label));
+    QLineEdit* edit = new QLineEdit(value);
+    edit->setValidator(validator);
+    layout->addWidget(edit);
+    return edit;
+}
+
+static QwtPlotCurve* add_plot_curve(const char* label, int r, int g, int b)
+{
+    QwtPlotCurve* curve = new QwtPlotCurve(label);
+    curve->setRenderHint(QwtPlotItem::RenderAntialiased);
+    curve->setPen(QPen(QColor(r,g,b)));
+    curve->setVisible(false);
+    return curve;
+}
+
 StartingPage::StartingPage() : QWidget()
 {
     validator = new QDoubleValidator(this);
 
     QHBoxLayout* reg = new QHBoxLayout;
     reg->addWidget(new QLabel("Regulator parameters:",this));
-    reg->addStretch(1);
-    reg->addWidget(new QLabel("K0f:",this));
-    reg->addWidget(K0f = new QLineEdit("10",this));
-    K0f->setValidator(validator);
-    reg->addStretch(1);
-    reg->addWidget(new QLabel("K1f:",this));
-    reg->addWidget(K1f = new QLineEdit("0.5",this));
-    K1f->setValidator(validator);
-    reg->addStretch(1);
-    reg->addWidget(new QLabel("Ur0:",this));
-    reg->addWidget(Ur0 = new QLineEdit("1.05",this));
-    Ur0->setValidator(validator);
-    reg->addStretch(1);
-    reg->addWidget(new QLabel("K0u:",this));
-    reg->addWidget(K0u = new QLineEdit("50",this));
-    K0u->setValidator(validator);
-    reg->addStretch(1);
-    reg->addWidget(new QLabel("K1u:",this));
-    reg->addWidget(K1u = new QLineEdit("3.6",this));
-    K1u->setValidator(validator);
+    K0f = add_double_input(reg, "K0f:", "10", validator);
+    K1f = add_double_input(reg, "K1f:", "0.5", validator);
+    Ur0 = add_double_input(reg, "Ur0:", "1.05", validator);
+    K0u = add_double_input(reg, "K0u:", "50", validator);
+    K1u = add_double_input(reg, "K1u:", "3.6", validator);
 
     QHBoxLayout* eqv = new QHBoxLayout;
     eqv->addWidget(new QLabel("Equivalent circuit parameters:",this));
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("Y11:",this));
-    eqv->addWidget(Y11 = new QLineEdit("0.496",this));
-    Y11->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("Y12:",this));
-    eqv->addWidget(Y12 = new QLineEdit("0.532",this));
-    Y12->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A11:",this));
-    eqv->addWidget(A11 = new QLineEdit("0.958",this));
-    A11->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A12:",this));
-    eqv->addWidget(A12 = new QLineEdit("0.715",this));
-    A12->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("Pd:",this));
-    eqv->addWidget(Pd = new QLineEdit("5",this));
-    Pd->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("Y11em:",this));
-    eqv->addWidget(Y11em = new QLineEdit("0.35",this));
-    Y11em->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("Y12em:",this));
-    eqv->addWidget(Y12em = new QLineEdit("0.45",this));
-    Y12em->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A11em:",this));
-    eqv->addWidget(A11em = new QLineEdit("0.9",this));
-    A11em->setValidator(validator);
-    eqv->addStretch(1);
-    eqv->addWidget(new QLabel("A12em:",this));
-    eqv->addWidget(A12em = new QLineEdit("0.3",this));
-    A12em->setValidator(validator);
+    Y11 = add_double_input(eqv, "Y11:", "0.496", validator);
+    Y12 = add_double_input(eqv, "Y12:", "0.532", validator);
+    A11 = add_double_input(eqv, "A11:", "0.958", validator);
+    A12 = add_double_input(eqv, "A12:", "0.715", validator);
+    Pd = add_double_input(eqv, "Pd:", "5", validator);
+    Y11em = add_double_input(eqv, "Y11em:", "0.35", validator);
+    Y12em = add_double_input(eqv, "Y12em:", "0.45", validator);
+    A11em = add_double_input(eqv, "A11em:", "0.9", validator);
+    A12em = add_double_input(eqv, "A12em:", "0.3", validator);
 
     QHBoxLayout* srt = new QHBoxLayout;
     srt->addWidget(new QLabel("Initial values:",this));
-    srt->addStretch(1);
-    srt->addWidget(new QLabel("Delta0:",this));
-    srt->addWidget(Delta0 = new QLineEdit("1.365",this));
-    Delta0->setValidator(validator);
-    srt->addStretch(1);
-    srt->addWidget(new QLabel("Eqe0:",this));
-    srt->addWidget(Eqe0 = new QLineEdit("1.87",this));
-    Eqe0->setValidator(validator);
-    srt->addStretch(1);
-    srt->addWidget(new QLabel("Eqprime0:",this));
-    srt->addWidget(Eqprime0 = new QLineEdit("1.1",this));
-    Eqprime0->setValidator(validator);
-    srt->addStretch(1);
-    srt->addWidget(new QLabel("U0:",this));
-    srt->addWidget(U0 = new QLineEdit("1.059",this));
-    U0->setValidator(validator);
-    srt->addStretch(1);
-    srt->addWidget(new QLabel("V0:",this));
-    srt->addWidget(V0 = new QLineEdit("0.597",this));
-    V0->setValidator(validator);
+    Delta0 = add_double_input(srt, "Delta0:", "1.365", validator);
+    Eqe0 = add_double_input(srt, "Eqe0:", "1.87", validator);
+    Eqprime0 = add_double_input(srt, "Eqprime0:", "1.1", validator);
+    U0 = add_double_input(srt, "U0:", "1.059", validator);
+    V0 = add_double_input(srt, "V0:", "0.597", validator);
 
     QHBoxLayout* cpt = new QHBoxLayout;
     cpt->addWidget(new QLabel("Computational parameters:",this));
-    cpt->addStretch(1);
-    cpt->addWidget(new QLabel("Tstart:",this));
-    cpt->addWidget(Tstart = new QLineEdit("0",this));
-    Tstart->setValidator(validator);
-    cpt->addStretch(1);
-    cpt->addWidget(new QLabel("Tstop:",this));
-    cpt->addWidget(Tstop = new QLineEdit("3",this));
-    Tstop->setValidator(validator);
-    cpt->addStretch(1);
-    cpt->addWidget(new QLabel("dt",this));
-    cpt->addWidget(dt = new QLineEdit("0.005",this));
-    dt->setValidator(validator);
-    cpt->addStretch(1);
-    cpt->addWidget(new QLabel("eps:",this));
-    cpt->addWidget(eps = new QLineEdit("0.005",this));
-    eps->setValidator(validator);
-    cpt->addStretch(1);
-    cpt->addWidget(new QLabel("max_iterations:",this));
-    cpt->addWidget(max_iterations = new QLineEdit("10",this));
-    max_iterations->setValidator(new QIntValidator(5,500,this));
+    Tstart = add_double_input(cpt, "Tstart:", "0", validator);
+    Tstop = add_double_input(cpt, "Tstop:", "3", validator);
+    dt = add_double_input(cpt, "dt:", "0.005", validator);
+    eps = add_double_input(cpt, "eps:", "0.005", validator);
+    max_iterations = add_double_input(cpt, "max_iterations:", "50", validator);
+    max_iterations->setValidator(new QIntValidator(5,5000,this));
 
     enable_eiler = new QCheckBox(this);
     enable_eiler->setChecked(false);
@@ -156,52 +104,17 @@ StartingPage::StartingPage() : QWidget()
     start_button->setEnabled(false);
 
     plot = new QwtPlot(this);
-    curve_eiler_Delta = new QwtPlotCurve("Delta Eiler");
-    curve_eiler_Delta->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_eiler_Delta->setPen(QPen(QColor(160,0,210)));
-    curve_eiler_Delta->setVisible(false);
-    //curve_eiler_Delta->attach(plot);
-    curve_eiler_Omega = new QwtPlotCurve("Omega Eiler");
-    curve_eiler_Omega->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_eiler_Omega->setPen(QPen(QColor(210,0,0)));
-    curve_eiler_Omega->setVisible(false);
-    //curve_eiler_Omega->attach(plot);
-    curve_eiler_Eqe = new QwtPlotCurve("Eqe Eiler");
-    curve_eiler_Eqe->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_eiler_Eqe->setPen(QPen(QColor(5,205,0)));
-    curve_eiler_Eqe->setVisible(false);
-    //curve_eiler_Eqe->attach(plot);
-    curve_eiler_Eqprime = new QwtPlotCurve("Eqprime Eiler");
-    curve_eiler_Eqprime->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_eiler_Eqprime->setPen(QPen(QColor(210,120,0)));
-    curve_eiler_Eqprime->setVisible(false);
-    //curve_eiler_Eqprime->attach(plot);
-    curve_eiler_U = new QwtPlotCurve("U Eiler");
-    curve_eiler_U->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_eiler_U->setPen(QPen(Qt::black));
-    curve_eiler_U->setVisible(false);
-    //curve_eiler_U->attach(plot);
 
-    curve_trapeze_Delta = new QwtPlotCurve("Delta Trapeze");
-    curve_trapeze_Delta->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_trapeze_Delta->setPen(QPen(QColor(210,50,255)));
-    curve_trapeze_Delta->setVisible(false);
-    //curve_trapeze_Delta->attach(plot);
-    curve_trapeze_Omega = new QwtPlotCurve("Omega Trapeze");
-    curve_trapeze_Omega->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_trapeze_Omega->setPen(QPen(QColor(255,45,45)));
-    curve_trapeze_Omega->setVisible(false);
-    //curve_trapeze_Omega->attach(plot);
-    curve_trapeze_Eqe = new QwtPlotCurve("Eqe Trapeze");
-    curve_trapeze_Eqe->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_trapeze_Eqe->setPen(QPen(QColor(50,255,50)));
-    curve_trapeze_Eqe->setVisible(false);
-    //curve_trapeze_Eqe->attach(plot);
-    curve_trapeze_Eqprime = new QwtPlotCurve("Eqprime Trapeze");
-    curve_trapeze_Eqprime->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve_trapeze_Eqprime->setPen(QPen(QColor(255,160,50)));
-    curve_trapeze_Eqprime->setVisible(false);
-    //curve_trapeze_Eqprime->attach(plot);
+    curve_eiler_Delta = add_plot_curve("Delta Eiler",160,0,210);
+    curve_eiler_Omega = add_plot_curve("Omega Eiler",210,0,0);
+    curve_eiler_Eqe = add_plot_curve("Eqe Eiler",5,205,0);
+    curve_eiler_Eqprime = add_plot_curve("Eqprime Eiler",210,120,0);
+    curve_eiler_U = add_plot_curve("U Eiler",0,0,0);
+
+    curve_trapeze_Delta = add_plot_curve("Delta Trapeze",210,50,255);
+    curve_trapeze_Omega = add_plot_curve("Omega Trapeze",255,45,45);
+    curve_trapeze_Eqe = add_plot_curve("Eqe Trapeze",50,255,50);
+    curve_trapeze_Eqprime = add_plot_curve("Eqprime Trapeze",255,160,50);
 
     QwtLegend* legend = new QwtLegend;
     legend->setItemMode(QwtLegend::ReadOnlyItem);
@@ -232,7 +145,6 @@ StartingPage::StartingPage() : QWidget()
 
     connect(enable_eiler, SIGNAL(clicked()), SLOT(wanna_eiler()));
     connect(enable_trapeze, SIGNAL(clicked()), SLOT(wanna_trapeze()));
-    //start_button->setFocus(Qt::TabFocusReason);
 }
 
 StartingPage::~StartingPage()
