@@ -156,6 +156,7 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     curve_trapeze_Omega = add_plot_curve("Omega Trapeze",255,45,45);
     curve_trapeze_Eqe = add_plot_curve("Eqe Trapeze",50,255,50);
     curve_trapeze_Eqprime = add_plot_curve("Eqprime Trapeze",255,160,50);
+    curve_trapeze_U = add_plot_curve("U Trapeze",60,60,60);
 
     QwtLegend* legend = new QwtLegend;
     legend->setItemMode(QwtLegend::ReadOnlyItem);
@@ -196,6 +197,7 @@ CalculusWidget::~CalculusWidget()
     if(not curve_trapeze_Omega->plot() )  delete curve_trapeze_Omega;
     if(not curve_trapeze_Eqe->plot() )  delete curve_trapeze_Eqe;
     if(not curve_trapeze_Eqprime->plot() )  delete curve_trapeze_Eqprime;
+    if(not curve_trapeze_U->plot() )  delete curve_trapeze_U;
 }
 
 void CalculusWidget::wanna_eiler()
@@ -216,6 +218,7 @@ void CalculusWidget::wanna_trapeze()
     curve_trapeze_Omega->attach( enable_trapeze->isChecked() ? plot : NULL );
     curve_trapeze_Eqe->attach( enable_trapeze->isChecked() ? plot : NULL );
     curve_trapeze_Eqprime->attach( enable_trapeze->isChecked() ? plot : NULL );
+    curve_trapeze_U->attach( enable_trapeze->isChecked() ? plot : NULL );
     emit enable_start_button( enable_eiler->isChecked() or enable_trapeze->isChecked() );
 }
 
@@ -323,8 +326,6 @@ void CalculusWidget::plot_answer_eiler(const QVector<AnswerItem> ans)
     QVector<QPointF> data_eqe(ans.size());
     QVector<QPointF> data_eqp(ans.size());
     QVector<QPointF> data_u(ans.size());
-    double max_delta = 0., max_omega = 0., max_Eqprime = 0., max_Eqe = 0.;
-    double min_delta = 0., min_omega = 0., min_Eqprime = 0., min_Eqe = 0.;
     for(int i=0; i<ans.size(); i++)
     {
         const AnswerItem& a = ans.at(i);
@@ -333,14 +334,6 @@ void CalculusWidget::plot_answer_eiler(const QVector<AnswerItem> ans)
         data_eqp[i] = QPointF(a.time, a.Eqprime);
         data_eqe[i] = QPointF(a.time, a.Eqe);
         data_u[i] = QPointF(a.time, a.U);
-        max_delta = std::max(max_delta, a.delta);
-        max_omega = std::max(max_omega, a.omega);
-        max_Eqprime = std::max(max_Eqprime, a.Eqprime);
-        max_Eqe = std::max(max_Eqe, a.Eqe);
-        min_delta = std::min(min_delta, a.delta);
-        min_omega = std::min(min_omega, a.omega);
-        min_Eqprime = std::min(min_Eqprime, a.Eqprime);
-        min_Eqe = std::min(min_Eqe, a.Eqe);
     }
     curve_eiler_U->setSamples(data_u);
     curve_eiler_Delta->setSamples(data_delta);
@@ -352,12 +345,13 @@ void CalculusWidget::plot_answer_eiler(const QVector<AnswerItem> ans)
     curve_eiler_Omega->setVisible(true);
     curve_eiler_Eqprime->setVisible(true);
     curve_eiler_Eqe->setVisible(true);
-
+/*
     double min = std::min(std::min(std::min(min_delta,min_omega),min_Eqprime),min_Eqe);
     double max = std::max(std::max(std::max(max_delta,max_omega),max_Eqprime),max_Eqe);
     plot->setAxisScale(QwtPlot::yLeft,min,max);
     qDebug()<<"plot->setVisible(true): max"<<max<<"max_delta"<<max_delta<<"max_omega"<<max_omega<<"max_Eqprime"<<max_Eqprime<<"max_Eqe"<<max_Eqe;
     qDebug()<<"plot->setVisible(true): min"<<min<<"min_delta"<<min_delta<<"min_omega"<<min_omega<<"min_Eqprime"<<min_Eqprime<<"min_Eqe"<<min_Eqe;
+    */
 }
 
 void CalculusWidget::plot_answer_trapeze(const QVector<AnswerItem> ans)
@@ -368,8 +362,7 @@ void CalculusWidget::plot_answer_trapeze(const QVector<AnswerItem> ans)
     QVector<QPointF> data_omega(ans.size());
     QVector<QPointF> data_eqe(ans.size());
     QVector<QPointF> data_eqp(ans.size());
-    double max_delta = 0., max_omega = 0., max_Eqprime = 0., max_Eqe = 0.;
-    double min_delta = 0., min_omega = 0., min_Eqprime = 0., min_Eqe = 0.;
+    QVector<QPointF> data_u(ans.size());
     for(int i=0; i<ans.size(); i++)
     {
         const AnswerItem& a = ans.at(i);
@@ -377,29 +370,18 @@ void CalculusWidget::plot_answer_trapeze(const QVector<AnswerItem> ans)
         data_omega[i] = QPointF(a.time, a.omega);
         data_eqp[i] = QPointF(a.time, a.Eqprime);
         data_eqe[i] = QPointF(a.time, a.Eqe);
-        max_delta = std::max(max_delta, a.delta);
-        max_omega = std::max(max_omega, a.omega);
-        max_Eqprime = std::max(max_Eqprime, a.Eqprime);
-        max_Eqe = std::max(max_Eqe, a.Eqe);
-        min_delta = std::min(min_delta, a.delta);
-        min_omega = std::min(min_omega, a.omega);
-        min_Eqprime = std::min(min_Eqprime, a.Eqprime);
-        min_Eqe = std::min(min_Eqe, a.Eqe);
+        data_u[i] = QPointF(a.time, a.U);
     }
     curve_trapeze_Delta->setSamples(data_delta);
     curve_trapeze_Omega->setSamples(data_omega);
     curve_trapeze_Eqprime->setSamples(data_eqp);
     curve_trapeze_Eqe->setSamples(data_eqe);
+    curve_trapeze_U->setSamples(data_u);
     curve_trapeze_Delta->setVisible(true);
     curve_trapeze_Omega->setVisible(true);
     curve_trapeze_Eqprime->setVisible(true);
     curve_trapeze_Eqe->setVisible(true);
-
-    double min = std::min(std::min(std::min(min_delta,min_omega),min_Eqprime),min_Eqe);
-    double max = std::max(std::max(std::max(max_delta,max_omega),max_Eqprime),max_Eqe);
-    //plot->setAxisScale(QwtPlot::yLeft,min,max);
-    qDebug()<<"plot->setVisible(true): max"<<max<<"max_delta"<<max_delta<<"max_omega"<<max_omega<<"max_Eqprime"<<max_Eqprime<<"max_Eqe"<<max_Eqe;
-    qDebug()<<"plot->setVisible(true): min"<<min<<"min_delta"<<min_delta<<"min_omega"<<min_omega<<"min_Eqprime"<<min_Eqprime<<"min_Eqe"<<min_Eqe;
+    curve_trapeze_U->setVisible(true);
 }
 
 //-----------------------------------------------------------------------

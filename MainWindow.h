@@ -56,6 +56,7 @@ class CalculusWidget : public QWidget
     QwtPlotCurve* curve_trapeze_Delta;
     QwtPlotCurve* curve_trapeze_Omega;
     QwtPlotCurve* curve_trapeze_Eqe;
+    QwtPlotCurve* curve_trapeze_U;
     QwtPlotCurve* curve_trapeze_Eqprime;
 
     QCheckBox* enable_eiler;
