@@ -3,8 +3,10 @@
 
 struct Params
 {
-    struct Reg {
+    struct Consts {
         double K0f, K1f, Ur0, K0u, K1u;
+        double T, Ty, Tu, Tg, Te, Tf, Tphi, Td0;
+        double Pt0, omega_nom, Xdprime, Xd, Eqenom, Uc;
     } reg;
     struct Repl {
         double Y11, Y12, A11, A12, Y11em, Y12em, A11em, A12em, Pd;

@@ -181,25 +181,6 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
-const static double Pt0 = 1.;
-const static double T = 1.;
-const static double Ty = 5.1;
-const static double Tu = 0.05;
-const static double Tg = 0.02;
-const static double Te = 0.03;
-const static double Tf = 0.05;
-const static double Tphi = 0.05;
-const static double Td0 = 5.87;
-const static double omega_nom = 18000.;
-const static double Xdprime = 0.207;
-const static double Xd = 1.364;
-const static double Xdp = (Xd-Xdprime)/Xd/Xdprime;
-const static double Eqenom = 1.87;
-const static double Uc = 1.;
-
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-
 Equiv equiv_params(double t, const X& x, const Params& p, Equiv e)
 {
     e.Y11 = t<0.12 ? p.repl.Y11em : p.repl.Y11;
@@ -208,7 +189,7 @@ Equiv equiv_params(double t, const X& x, const Params& p, Equiv e)
     e.A12 = t<0.12 ? p.repl.A12em : p.repl.A12;
     e.Pd = p.repl.Pd;
     const double U = x(11);
-    if(U < 0.85) e.Upphi = 2.*Eqenom - (2.*Eqenom - p.start.Eqe0)*std::exp(-t/Te);
+    if(U < 0.85) e.Upphi = 2.*p.reg.Eqenom - (2.*p.reg.Eqenom - p.start.Eqe0)*std::exp(-t/p.reg.Te);
     if(U > 0.9)  e.Upphi = 0.;
     return e;
 }
@@ -218,8 +199,10 @@ Equiv equiv_params(double t, const X& x, const Params& p, Equiv e)
 
 struct Eiler {
 
-    static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Reg& reg, const Equiv& e)
+    static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
     {
+        const double Xdp = (reg.Xd-reg.Xdprime)/reg.Xd/reg.Xdprime;
+
         const double domega_k = x_k_1(0);   const double domega = x_i_1(0);
         const double delta_k = x_k_1(1);    const double delta = x_i_1(1);
         const double Eqprime_k = x_k_1(2);  const double Eqprime = x_i_1(2);
@@ -236,23 +219,25 @@ struct Eiler {
 
         X W;
         W(0) = delta - delta_k - dt*domega;
-        W(1) = domega - domega_k - (dt/Ty)*omega_nom*(Pt0 - e.Pd/omega_nom*domega - Eqprime*U/Xdprime*sin(d_v) + U*U*Xdp*sin(d_v)*cos(d_v));
-        W(2) = Eqprime - Eqprime_k - (dt/Td0)*(Eqe - Eqprime*Xd/Xdprime + U*Xd*Xdp*cos(d_v));
-        W(3) = X3 - X3_k - (dt/Tu)*(reg.K0u*(reg.Ur0 - U) - X3);
-        W(4) = X4 - X4_k - (dt/Tg)*(reg.K1u/Tu*(reg.Ur0 - U - X3/reg.K0u) - X4);
-        W(5) = X5 - X5_k - (dt/Tphi)*(V - X5);
-        W(6) = X6 - X6_k - (dt/Tf)*((V - X5)/Tphi - X6);
-        W(7) = X8 - X8_k - (dt/Tf)*reg.K0f*((V - X5)/Tphi - X6) - dt/T*X8;
-        W(8) = X9 - X9_k - (dt/Tg)*(reg.K1f/Tf*((V - X5)/Tphi - X6) - reg.K1f/reg.K0f/T*X8 - X9);
-        W(9) = Eqe - Eqe_k - (dt/Te)*(X3 + X4 + X8 + X9 + e.Upphi - Eqe);
-        W(10) = Eqprime*U/Xdprime*sin(d_v) - U*U*Xdp*sin(d_v)*cos(d_v) - U*U*e.Y11*sin(e.A11) - U*Uc*e.Y12*sin(V-e.A12);
-        W(11) = Eqprime*U/Xdprime*cos(d_v) - U*U/Xdprime + U*U*Xdp*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*Uc*e.Y12*cos(V-e.A12);
+        W(1) = domega - domega_k - (dt/reg.Ty)*reg.omega_nom*(reg.Pt0 - e.Pd/reg.omega_nom*domega - Eqprime*U/reg.Xdprime*sin(d_v) + U*U*Xdp*sin(d_v)*cos(d_v));
+        W(2) = Eqprime - Eqprime_k - (dt/reg.Td0)*(Eqe - Eqprime*reg.Xd/reg.Xdprime + U*reg.Xd*Xdp*cos(d_v));
+        W(3) = X3 - X3_k - (dt/reg.Tu)*(reg.K0u*(reg.Ur0 - U) - X3);
+        W(4) = X4 - X4_k - (dt/reg.Tg)*(reg.K1u/reg.Tu*(reg.Ur0 - U - X3/reg.K0u) - X4);
+        W(5) = X5 - X5_k - (dt/reg.Tphi)*(V - X5);
+        W(6) = X6 - X6_k - (dt/reg.Tf)*((V - X5)/reg.Tphi - X6);
+        W(7) = X8 - X8_k - (dt/reg.Tf)*reg.K0f*((V - X5)/reg.Tphi - X6) - dt/reg.T*X8;
+        W(8) = X9 - X9_k - (dt/reg.Tg)*(reg.K1f/reg.Tf*((V - X5)/reg.Tphi - X6) - reg.K1f/reg.K0f/reg.T*X8 - X9);
+        W(9) = Eqe - Eqe_k - (dt/reg.Te)*(X3 + X4 + X8 + X9 + e.Upphi - Eqe);
+        W(10) = Eqprime*U/reg.Xdprime*sin(d_v) - U*U*Xdp*sin(d_v)*cos(d_v) - U*U*e.Y11*sin(e.A11) - U*reg.Uc*e.Y12*sin(V-e.A12);
+        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime + U*U*Xdp*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
         return W;
     }
-    static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Reg& reg, const Equiv& e)
+    static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
     {
         IMatrix I;
         //I = boost::numeric::ublas::zero_matrix<double>(12,12);
+
+        const double Xdp = (reg.Xd-reg.Xdprime)/reg.Xd/reg.Xdprime;
 
         const double delta = x_i_1(1);
         const double Eqprime = x_i_1(2);
@@ -263,58 +248,58 @@ struct Eiler {
         I(0,0) = -dt;
         I(0,1) = 1.;
 
-        I(1,0) = (dt/Ty)*e.Pd + 1.;
-        I(1,1) = (dt/Ty)*omega_nom*(Eqprime*U/Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v));
-        I(1,2) = (dt/Ty)*omega_nom*U/Xdprime*sin(d_v);
+        I(1,0) = (dt/reg.Ty)*e.Pd + 1.;
+        I(1,1) = (dt/reg.Ty)*reg.omega_nom*(Eqprime*U/reg.Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v));
+        I(1,2) = (dt/reg.Ty)*reg.omega_nom*U/reg.Xdprime*sin(d_v);
         I(1,10) = -I(1,1);
-        I(1,11) = (dt/Ty)*omega_nom*(Eqprime/Xdprime*sin(d_v) - U*Xdp*sin(2*d_v));
+        I(1,11) = (dt/reg.Ty)*reg.omega_nom*(Eqprime/reg.Xdprime*sin(d_v) - U*Xdp*sin(2*d_v));
 
-        I(2,1) = (dt/Td0)*U*Xd*Xdp*sin(d_v);
-        I(2,2) = (dt/Td0)*Xd/Xdprime + 1.;
-        I(2,3) = -(dt/Td0);
+        I(2,1) = (dt/reg.Td0)*U*reg.Xd*Xdp*sin(d_v);
+        I(2,2) = (dt/reg.Td0)*reg.Xd/reg.Xdprime + 1.;
+        I(2,3) = -(dt/reg.Td0);
         I(2,10) = -I(2,1);
-        I(2,11) = (dt/Td0)*Xd*Xdp*cos(d_v);
+        I(2,11) = (dt/reg.Td0)*reg.Xd*Xdp*cos(d_v);
 
-        I(3,4) = (dt/Tu) + 1.;
-        I(3,11) = (dt/Tu)*reg.K0u;
+        I(3,4) = (dt/reg.Tu) + 1.;
+        I(3,11) = (dt/reg.Tu)*reg.K0u;
 
-        I(4,4) = (dt/Tg)*reg.K1u/reg.K0u/Tu;
-        I(4,5) = (dt/Tg) + 1.;
-        I(4,11) = (dt/Tg)*reg.K1u/Tu;
+        I(4,4) = (dt/reg.Tg)*reg.K1u/reg.K0u/reg.Tu;
+        I(4,5) = (dt/reg.Tg) + 1.;
+        I(4,11) = (dt/reg.Tg)*reg.K1u/reg.Tu;
 
-        I(5,6) = (dt/Tphi) + 1.;
-        I(5,10) = -(dt/Tphi);
+        I(5,6) = (dt/reg.Tphi) + 1.;
+        I(5,10) = -(dt/reg.Tphi);
 
-        I(6,6) = (dt/Tphi)/Tf;
-        I(6,7) = (dt/Tf) + 1.;
+        I(6,6) = (dt/reg.Tphi)/reg.Tf;
+        I(6,7) = (dt/reg.Tf) + 1.;
         I(6,10) = -I(6,6);
 
-        I(7,6) = (dt/Tphi)/Tf*reg.K0f;
-        I(7,7) = I(7,6)*Tphi;
-        I(7,8) = 1. - dt/T;
+        I(7,6) = (dt/reg.Tphi)/reg.Tf*reg.K0f;
+        I(7,7) = I(7,6)*reg.Tphi;
+        I(7,8) = 1. - dt/reg.T;
         I(7,10) = -I(7,6);
 
-        I(8,6) = (dt/Tg)*reg.K1f/Tf/Tphi;
-        I(8,7) = I(8,6)*Tphi;
-        I(8,8) = (dt/Tg)*reg.K1f/reg.K0f/T;
-        I(8,9) = (dt/Tg) + 1.;
+        I(8,6) = (dt/reg.Tg)*reg.K1f/reg.Tf/reg.Tphi;
+        I(8,7) = I(8,6)*reg.Tphi;
+        I(8,8) = (dt/reg.Tg)*reg.K1f/reg.K0f/reg.T;
+        I(8,9) = (dt/reg.Tg) + 1.;
         I(8,10) = -I(8,6);
 
-        I(9,3) = (dt/Te) + 1.;
-        I(9,4) = -(dt/Te);
-        I(9,5) = -(dt/Te);
-        I(9,8) = -(dt/Te);
-        I(9,9) = -(dt/Te);
+        I(9,3) = (dt/reg.Te) + 1.;
+        I(9,4) = -(dt/reg.Te);
+        I(9,5) = -(dt/reg.Te);
+        I(9,8) = -(dt/reg.Te);
+        I(9,9) = -(dt/reg.Te);
 
-        I(10,1) = Eqprime*U/Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v);
-        I(10,2) = U/Xdprime*sin(d_v);
-        I(10,10) = -I(10,1) - U*Uc*e.Y12*cos(V-e.A12);
-        I(10,11) = -Uc*e.Y12*sin(V-e.A12) - 2.*U*e.Y11*sin(e.A11) + Eqprime/Xdprime*sin(d_v) - U*Xdp*sin(2.*d_v);
+        I(10,1) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v);
+        I(10,2) = U/reg.Xdprime*sin(d_v);
+        I(10,10) = -I(10,1) - U*reg.Uc*e.Y12*cos(V-e.A12);
+        I(10,11) = -reg.Uc*e.Y12*sin(V-e.A12) - 2.*U*e.Y11*sin(e.A11) + Eqprime/reg.Xdprime*sin(d_v) - U*Xdp*sin(2.*d_v);
 
-        I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/Xdprime*sin(d_v);
-        I(11,2) = U/Xdprime*cos(d_v);
-        I(11,10) = -I(11,1) - U*Uc*e.Y12*sin(V-e.A12);
-        I(11,11) = Eqprime/Xdprime*cos(d_v) - 2.*U/Xdprime + 2.*U*Xdp*sin(d_v)*sin(d_v) + Uc*e.Y12*cos(V-e.A12) - 2.*U*e.Y11*cos(e.A11);
+        I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/reg.Xdprime*sin(d_v);
+        I(11,2) = U/reg.Xdprime*cos(d_v);
+        I(11,10) = -I(11,1) - U*reg.Uc*e.Y12*sin(V-e.A12);
+        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2.*U/reg.Xdprime + 2.*U*Xdp*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2.*U*e.Y11*cos(e.A11);
         return I;
     }
 };
@@ -367,8 +352,10 @@ QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
 
 struct Trapeze {
 
-    static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Reg& reg, const Equiv& e)
+    static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
     {
+        const double Xdp = (reg.Xd-reg.Xdprime)/reg.Xd/reg.Xdprime;
+
         const double domega_k = x_k_1(0);   const double domega = x_i_1(0);
         const double delta_k = x_k_1(1);    const double delta = x_i_1(1);
         const double Eqprime_k = x_k_1(2);  const double Eqprime = x_i_1(2);
@@ -385,27 +372,29 @@ struct Trapeze {
 
         X W;
         W(0) = delta - delta_k - dt/2.*(domega + domega_k);
-        W(1) = domega - domega_k - dt/Ty/2.*omega_nom*(Pt0 + Pt0 - e.Pd/omega_nom*(domega + domega_k)
-                - Eqprime*U/Xdprime*sin(d_v) - Eqprime_k*U_k/Xdprime*sin(d_v_k)
+        W(1) = domega - domega_k - dt/reg.Ty/2.*reg.omega_nom*(reg.Pt0 + reg.Pt0 - e.Pd/reg.omega_nom*(domega + domega_k)
+                - Eqprime*U/reg.Xdprime*sin(d_v) - Eqprime_k*U_k/reg.Xdprime*sin(d_v_k)
                 + U*U*Xdp*sin(d_v)*cos(d_v) + U_k*U_k*Xdp*sin(d_v_k)*cos(d_v_k));
-        W(2) = Eqprime - Eqprime_k - dt/Td0/2.*(Eqe + Eqe_k - (Eqprime + Eqprime_k)*Xd/Xdprime
-                + U*Xd*Xdp*cos(d_v) + U_k*Xd*Xdp*cos(d_v_k));
-        W(3) = X3 - X3_k - dt/Tu/2.*(2.*reg.K0u*reg.Ur0 - reg.K0u*(U + U_k) - X3 - X3_k);
-        W(4) = X4 - X4_k - dt/Tg/2.*(2.*reg.K1u/Tu*reg.Ur0 - reg.K1u/Tu*(U + U_k) - reg.K1u/reg.K0u/Tu*(X3 + X3_k) - X4 - X4_k);
-        W(5) = X5 - X5_k - dt/Tphi/2.*(V + V_k - X5 - X5_k);
-        W(6) = X6 - X6_k - dt/Tf/2.*((V + V_k - X5 - X5_k)/Tphi - X6 - X6_k);
-        W(7) = X8 - X8_k - dt/Tf/2.*reg.K0f*((V + V_k - X5 - X5_k)/Tphi - X6 - X6_k) - dt/T*(X8 + X8_k);
-        W(8) = X9 - X9_k - dt/Tg/2.*(reg.K1f/Tf*((V + V_k - X5 - X5_k)/Tphi - X6 - X6_k)
-                - reg.K1f/reg.K0f/T*(X8 + X8_k) - X9 - X9_k);
-        W(9) = Eqe - Eqe_k - dt/Te/2.*(X3 + X3_k + X4 + X4_k + X8 + X8_k + X9 + X9_k + 2.*e.Upphi - Eqe - Eqe_k);
-        W(10) = Eqprime*U/Xdprime*sin(d_v) - U*U*Xdp*sin(d_v)*cos(d_v) - U*U*e.Y11*sin(e.A11) - U*Uc*e.Y12*sin(V-e.A12);
-        W(11) = Eqprime*U/Xdprime*cos(d_v) - U*U/Xdprime + U*U*Xdp*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*Uc*e.Y12*cos(V-e.A12);
+        W(2) = Eqprime - Eqprime_k - dt/reg.Td0/2.*(Eqe + Eqe_k - (Eqprime + Eqprime_k)*reg.Xd/reg.Xdprime
+                + U*reg.Xd*Xdp*cos(d_v) + U_k*reg.Xd*Xdp*cos(d_v_k));
+        W(3) = X3 - X3_k - dt/reg.Tu/2.*(2.*reg.K0u*reg.Ur0 - reg.K0u*(U + U_k) - X3 - X3_k);
+        W(4) = X4 - X4_k - dt/reg.Tg/2.*(2.*reg.K1u/reg.Tu*reg.Ur0 - reg.K1u/reg.Tu*(U + U_k) - reg.K1u/reg.K0u/reg.Tu*(X3 + X3_k) - X4 - X4_k);
+        W(5) = X5 - X5_k - dt/reg.Tphi/2.*(V + V_k - X5 - X5_k);
+        W(6) = X6 - X6_k - dt/reg.Tf/2.*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k);
+        W(7) = X8 - X8_k - dt/reg.Tf/2.*reg.K0f*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k) - dt/reg.T*(X8 + X8_k);
+        W(8) = X9 - X9_k - dt/reg.Tg/2.*(reg.K1f/reg.Tf*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k)
+                - reg.K1f/reg.K0f/reg.T*(X8 + X8_k) - X9 - X9_k);
+        W(9) = Eqe - Eqe_k - dt/reg.Te/2.*(X3 + X3_k + X4 + X4_k + X8 + X8_k + X9 + X9_k + 2.*e.Upphi - Eqe - Eqe_k);
+        W(10) = Eqprime*U/reg.Xdprime*sin(d_v) - U*U*Xdp*sin(d_v)*cos(d_v) - U*U*e.Y11*sin(e.A11) - U*reg.Uc*e.Y12*sin(V-e.A12);
+        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime + U*U*Xdp*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
         return W;
     }
-    static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Reg& reg, const Equiv& e)
+    static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
     {
         IMatrix I;
         //I = boost::numeric::ublas::zero_matrix<double>(12,12);
+
+        const double Xdp = (reg.Xd-reg.Xdprime)/reg.Xd/reg.Xdprime;
 
         const double delta = x_i_1(1);
         const double Eqprime = x_i_1(2);
@@ -416,58 +405,58 @@ struct Trapeze {
         I(0,0) = -dt/2.;
         I(0,1) = 1.;
 
-        I(1,0) = dt/Ty/2.*e.Pd + 1.;
-        I(1,1) = dt/Ty/2.*omega_nom*(Eqprime*U/Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v));
-        I(1,2) = dt/Ty/2.*omega_nom*U/Xdprime*sin(d_v);
+        I(1,0) = dt/reg.Ty/2.*e.Pd + 1.;
+        I(1,1) = dt/reg.Ty/2.*reg.omega_nom*(Eqprime*U/reg.Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v));
+        I(1,2) = dt/reg.Ty/2.*reg.omega_nom*U/reg.Xdprime*sin(d_v);
         I(1,10) = -I(1,1);
-        I(1,11) = dt/Ty/2.*omega_nom*(Eqprime/Xdprime*sin(d_v) - U*Xdp*sin(2*d_v));
+        I(1,11) = dt/reg.Ty/2.*reg.omega_nom*(Eqprime/reg.Xdprime*sin(d_v) - U*Xdp*sin(2*d_v));
 
-        I(2,1) = dt/Td0/2.*U*Xd*Xdp*sin(d_v);
-        I(2,2) = dt/Td0/2.*Xd/Xdprime + 1.;
-        I(2,3) = -dt/Td0/2.;
+        I(2,1) = dt/reg.Td0/2.*U*reg.Xd*Xdp*sin(d_v);
+        I(2,2) = dt/reg.Td0/2.*reg.Xd/reg.Xdprime + 1.;
+        I(2,3) = -dt/reg.Td0/2.;
         I(2,10) = -I(2,1);
-        I(2,11) = dt/Td0/2.*Xd*Xdp*cos(d_v);
+        I(2,11) = dt/reg.Td0/2.*reg.Xd*Xdp*cos(d_v);
 
-        I(3,4) = dt/Tu/2. + 1.;
-        I(3,11) = dt/Tu/2.*reg.K0u;
+        I(3,4) = dt/reg.Tu/2. + 1.;
+        I(3,11) = dt/reg.Tu/2.*reg.K0u;
 
-        I(4,4) = dt/Tg/2.*reg.K1u/reg.K0u/Tu;
-        I(4,5) = dt/Tg/2. + 1.;
+        I(4,4) = dt/reg.Tg/2.*reg.K1u/reg.K0u/reg.Tu;
+        I(4,5) = dt/reg.Tg/2. + 1.;
         I(4,11) = I(4,4)*reg.K0u;
 
-        I(5,6) = dt/Tphi/2. + 1.;
-        I(5,10) = -dt/Tphi/2.;
+        I(5,6) = dt/reg.Tphi/2. + 1.;
+        I(5,10) = -dt/reg.Tphi/2.;
 
-        I(6,6) = dt/Tf/2./Tphi;
-        I(6,7) = dt/Tf/2. + 1.;
+        I(6,6) = dt/reg.Tf/2./reg.Tphi;
+        I(6,7) = dt/reg.Tf/2. + 1.;
         I(6,10) = -I(6,6);
 
-        I(7,6) = dt/Tphi/Tf/2.*reg.K0f;
-        I(7,7) = I(7,6)*Tphi;
-        I(7,8) = 1. - dt/T/2.;
+        I(7,6) = dt/reg.Tphi/reg.Tf/2.*reg.K0f;
+        I(7,7) = I(7,6)*reg.Tphi;
+        I(7,8) = 1. - dt/reg.T/2.;
         I(7,10) = -I(7,6);
 
-        I(8,6) = dt/Tg/Tf/Tphi/2.*reg.K1f;
-        I(8,7) = I(8,6)*Tphi;
-        I(8,8) = dt/Tg/2.*reg.K1f/reg.K0f/T;
-        I(8,9) = dt/Tg/2. + 1.;
+        I(8,6) = dt/reg.Tg/reg.Tf/reg.Tphi/2.*reg.K1f;
+        I(8,7) = I(8,6)*reg.Tphi;
+        I(8,8) = dt/reg.Tg/2.*reg.K1f/reg.K0f/reg.T;
+        I(8,9) = dt/reg.Tg/2. + 1.;
         I(8,10) = -I(8,6);
 
-        I(9,3) = dt/Te/2. + 1.;
-        I(9,4) = -dt/Te/2.;
-        I(9,5) = -dt/Te/2.;
-        I(9,8) = -dt/Te/2.;
-        I(9,9) = -dt/Te/2.;
+        I(9,3) = dt/reg.Te/2. + 1.;
+        I(9,4) = -dt/reg.Te/2.;
+        I(9,5) = -dt/reg.Te/2.;
+        I(9,8) = -dt/reg.Te/2.;
+        I(9,9) = -dt/reg.Te/2.;
 
-        I(10,1) = Eqprime*U/Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v);
-        I(10,2) = U/Xdprime*sin(d_v);
-        I(10,10) = -I(10,1) - U*Uc*e.Y12*cos(V-e.A12);
-        I(10,11) = -Uc*e.Y12*sin(V-e.A12) - 2.*U*e.Y11*sin(e.A11) + Eqprime/Xdprime*sin(d_v) - U*Xdp*sin(2.*d_v);
+        I(10,1) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v);
+        I(10,2) = U/reg.Xdprime*sin(d_v);
+        I(10,10) = -I(10,1) - U*reg.Uc*e.Y12*cos(V-e.A12);
+        I(10,11) = -reg.Uc*e.Y12*sin(V-e.A12) - 2.*U*e.Y11*sin(e.A11) + Eqprime/reg.Xdprime*sin(d_v) - U*Xdp*sin(2.*d_v);
 
-        I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/Xdprime*sin(d_v);
-        I(11,2) = U/Xdprime*cos(d_v);
-        I(11,10) = -I(11,1) - U*Uc*e.Y12*sin(V-e.A12);
-        I(11,11) = Eqprime/Xdprime*cos(d_v) - 2.*U/Xdprime + 2.*U*Xdp*sin(d_v)*sin(d_v) + Uc*e.Y12*cos(V-e.A12) - 2.*U*e.Y11*cos(e.A11);
+        I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/reg.Xdprime*sin(d_v);
+        I(11,2) = U/reg.Xdprime*cos(d_v);
+        I(11,10) = -I(11,1) - U*reg.Uc*e.Y12*sin(V-e.A12);
+        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2.*U/reg.Xdprime + 2.*U*Xdp*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2.*U*e.Y11*cos(e.A11);
         return I;
     }
 };
