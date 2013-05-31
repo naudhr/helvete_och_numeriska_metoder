@@ -228,8 +228,8 @@ struct Eiler {
         W(7) = X8 - X8_k - (dt/reg.Tf)*reg.K0f*((V - X5)/reg.Tphi - X6) - dt/reg.T*X8;
         W(8) = X9 - X9_k - (dt/reg.Tg)*(reg.K1f/reg.Tf*((V - X5)/reg.Tphi - X6) - reg.K1f/reg.K0f/reg.T*X8 - X9);
         W(9) = Eqe - Eqe_k - (dt/reg.Te)*(X3 + X4 + X8 + X9 + e.Upphi - Eqe);
-        W(10) = Eqprime*U/reg.Xdprime*sin(d_v) - U*U*Xdp*sin(d_v)*cos(d_v) - U*U*e.Y11*sin(e.A11) - U*reg.Uc*e.Y12*sin(V-e.A12);
-        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime + U*U*Xdp*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
+        W(10) = Eqprime*U/reg.Xdprime*sin(d_v) - U*U*Xdp*sin(2*d_v)/2 - U*U*e.Y11*sin(e.A11) - U*reg.Uc*e.Y12*sin(V-e.A12);
+        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime*cos(d_v)*cos(d_v) - U*U/reg.Xd*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
         return W;
     }
     static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
@@ -299,7 +299,7 @@ struct Eiler {
         I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/reg.Xdprime*sin(d_v);
         I(11,2) = U/reg.Xdprime*cos(d_v);
         I(11,10) = -I(11,1) - U*reg.Uc*e.Y12*sin(V-e.A12);
-        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2.*U/reg.Xdprime + 2.*U*Xdp*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2.*U*e.Y11*cos(e.A11);
+        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2*U/reg.Xdprime*cos(d_v)*cos(d_v) - 2*U/reg.Xd*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2*U*e.Y11*cos(e.A11);
         return I;
     }
 };
@@ -385,8 +385,8 @@ struct Trapeze {
         W(8) = X9 - X9_k - dt/reg.Tg/2.*(reg.K1f/reg.Tf*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k)
                 - reg.K1f/reg.K0f/reg.T*(X8 + X8_k) - X9 - X9_k);
         W(9) = Eqe - Eqe_k - dt/reg.Te/2.*(X3 + X3_k + X4 + X4_k + X8 + X8_k + X9 + X9_k + 2.*e.Upphi - Eqe - Eqe_k);
-        W(10) = Eqprime*U/reg.Xdprime*sin(d_v) - U*U*Xdp*sin(d_v)*cos(d_v) - U*U*e.Y11*sin(e.A11) - U*reg.Uc*e.Y12*sin(V-e.A12);
-        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime + U*U*Xdp*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
+        W(10) = Eqprime*U/reg.Xdprime*sin(d_v) - U*U*Xdp*sin(2*d_v)/2 - U*U*e.Y11*sin(e.A11) - U*reg.Uc*e.Y12*sin(V-e.A12);
+        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime*cos(d_v)*cos(d_v) - U*U/reg.Xd*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
         return W;
     }
     static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
@@ -456,7 +456,7 @@ struct Trapeze {
         I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/reg.Xdprime*sin(d_v);
         I(11,2) = U/reg.Xdprime*cos(d_v);
         I(11,10) = -I(11,1) - U*reg.Uc*e.Y12*sin(V-e.A12);
-        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2.*U/reg.Xdprime + 2.*U*Xdp*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2.*U*e.Y11*cos(e.A11);
+        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2*U/reg.Xdprime*cos(d_v)*cos(d_v) - 2*U/reg.Xd*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2*U*e.Y11*cos(e.A11);
         return I;
     }
 };
