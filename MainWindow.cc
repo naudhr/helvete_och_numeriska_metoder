@@ -116,7 +116,7 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     cpt->addWidget(new QLabel("Computational parameters:",this));
     Tstart = add_double_input(cpt, "Tstart:", "0", validator);
     Tstop = add_double_input(cpt, "Tstop:", "3", validator);
-    dt = add_double_input(cpt, "dt:", "0.005", validator);
+    dt = add_double_input(cpt, "dt:", "0.0001", validator);
     eps = add_double_input(cpt, "eps:", "0.005", validator);
     max_iterations = add_double_input(cpt, "max_iterations:", "50", validator);
     max_iterations->setValidator(new QIntValidator(5,5000,this));

@@ -181,7 +181,7 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
-Equiv equiv_params(double t, const X& x, const Params& p, Equiv e)
+Equiv recalculate_equiv_params(double t, const X& x, const Params& p, Equiv e)
 {
     e.Y11 = t<0.12 ? p.repl.Y11em : p.repl.Y11;
     e.Y12 = t<0.12 ? p.repl.Y12em : p.repl.Y12;
@@ -328,14 +328,12 @@ QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
     X x = make_x0(p);
     a.push_back( make_answer_item(p.Tstart,x) );
 
-    const Equiv e = { 0., 0., 0., 0., 0., 0. };
+    Equiv e = { 0., 0., 0., 0., 0., 0. };
     for(double t=p.Tstart+p.dt; t<p.Tstop; t+=p.dt) try
     {
-        x = solve_newton<Eiler>(x, p, equiv_params(t,x,p,e));
+        x = solve_newton<Eiler>(x, p, e = recalculate_equiv_params(t,x,p,e));
         a.push_back( make_answer_item(t,x) );
         emit a_step_done();
-        if(false and std::abs(a.back().Eqe) > 1e2)
-            throw RatherSuspiciousEqe(a.back().Eqe);
     }
     catch(NewtonDoesNotConverge)
     {
@@ -471,10 +469,10 @@ QVector<AnswerItem> CalculusTrapeze::doWork(const Params& p)
     X x = make_x0(p);
     a.push_back( make_answer_item(p.Tstart,x) );
 
-    const Equiv e = { 0., 0., 0., 0., 0., 0. };
-    for(double t=p.Tstart+p.dt; t<p.Tstop; t+=p.dt) try
+    Equiv e = { 0., 0., 0., 0., 0., 0. };
+    for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
     {
-        x = solve_newton<Trapeze>(x, p, equiv_params(t,x,p,e));
+        x = solve_newton<Trapeze>(x, p, e = recalculate_equiv_params(t,x,p,e));
         a.push_back( make_answer_item(t,x) );
         emit a_step_done();
     }
