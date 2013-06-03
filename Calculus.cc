@@ -229,7 +229,7 @@ struct Eiler {
         W(8) = X9 - X9_k - (dt/reg.Tg)*(reg.K1f/reg.Tf*((V - X5)/reg.Tphi - X6) - reg.K1f/reg.K0f/reg.T*X8 - X9);
         W(9) = Eqe - Eqe_k - (dt/reg.Te)*(X3 + X4 + X8 + X9 + e.Upphi - Eqe);
         W(10) = Eqprime*U/reg.Xdprime*sin(d_v) - U*U*Xdp*sin(2*d_v)/2 - U*U*e.Y11*sin(e.A11) - U*reg.Uc*e.Y12*sin(V-e.A12);
-        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime*cos(d_v)*cos(d_v) - U*U/reg.Xd*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
+        W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U*(cos(d_v)*cos(d_v)/reg.Xdprime + sin(d_v)*sin(d_v)/reg.Xd) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
         return W;
     }
     static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
@@ -299,7 +299,7 @@ struct Eiler {
         I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/reg.Xdprime*sin(d_v);
         I(11,2) = U/reg.Xdprime*cos(d_v);
         I(11,10) = -I(11,1) - U*reg.Uc*e.Y12*sin(V-e.A12);
-        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2*U/reg.Xdprime*cos(d_v)*cos(d_v) - 2*U/reg.Xd*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2*U*e.Y11*cos(e.A11);
+        I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2*U*(cos(d_v)*cos(d_v)/reg.Xdprime + sin(d_v)*sin(d_v)/reg.Xd) - 2*U*e.Y11*cos(e.A11) + reg.Uc*e.Y12*cos(V-e.A12);
         return I;
     }
 };
@@ -310,15 +310,10 @@ struct Eiler {
 static AnswerItem make_answer_item(double t, const X& x)
 {
     AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
-    i.time=t, i.delta=x(1), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
+    i.time=t, i.delta=x(1)-x(10), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
+    //i.time=t, i.delta=x(3), i.omega=x(4), i.Eqe=x(5), i.Eqprime=x(6), i.V=x(7), i.U=x(8);
     return i;
 }
-
-struct RatherSuspiciousEqe
-{
-    double value;
-    RatherSuspiciousEqe(double v) : value(v) {}
-};
 
 QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
 {
@@ -329,7 +324,7 @@ QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
     a.push_back( make_answer_item(p.Tstart,x) );
 
     Equiv e = { 0., 0., 0., 0., 0., 0. };
-    for(double t=p.Tstart+p.dt; t<p.Tstop; t+=p.dt) try
+    for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
     {
         x = solve_newton<Eiler>(x, p, e = recalculate_equiv_params(t,x,p,e));
         a.push_back( make_answer_item(t,x) );

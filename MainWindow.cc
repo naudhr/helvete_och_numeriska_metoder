@@ -146,13 +146,13 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
 
     plot = new QwtPlot(this);
 
-    curve_eiler_Delta = add_plot_curve("Delta Eiler",160,0,210);
+    curve_eiler_Delta = add_plot_curve("\\Delta - \\Nu Eiler",160,0,210);
     curve_eiler_Omega = add_plot_curve("Omega Eiler",210,0,0);
     curve_eiler_Eqe = add_plot_curve("Eqe Eiler",5,205,0);
     curve_eiler_Eqprime = add_plot_curve("Eqprime Eiler",210,120,0);
     curve_eiler_U = add_plot_curve("U Eiler",0,0,0);
 
-    curve_trapeze_Delta = add_plot_curve("Delta Trapeze",210,50,255);
+    curve_trapeze_Delta = add_plot_curve("\\Delta - \\Nu Trapeze",210,50,255);
     curve_trapeze_Omega = add_plot_curve("Omega Trapeze",255,45,45);
     curve_trapeze_Eqe = add_plot_curve("Eqe Trapeze",50,255,50);
     curve_trapeze_Eqprime = add_plot_curve("Eqprime Trapeze",255,160,50);
