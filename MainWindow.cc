@@ -94,15 +94,15 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
 
     QHBoxLayout* eqv = new QHBoxLayout;
     eqv->addWidget(new QLabel("Equivalent circuit parameters:",this));
-    Y11 = add_double_input(eqv, "Y11:", "0.496", validator);
-    Y12 = add_double_input(eqv, "Y12:", "0.532", validator);
-    A11 = add_double_input(eqv, "A11:", "0.958", validator);
-    A12 = add_double_input(eqv, "A12:", "0.715", validator);
+    Y11 = add_double_input(eqv, "Y11:", "1.169"/*"0.496"*/, validator);
+    Y12 = add_double_input(eqv, "Y12:", "1.253"/*"0.532"*/, validator);
+    A11 = add_double_input(eqv, "A11:", "0.039"/*"0.958"*/, validator);
+    A12 = add_double_input(eqv, "A12:", "0.035"/*"0.715"*/, validator);
     Pd = add_double_input(eqv, "Pd:", "5", validator);
-    Y11em = add_double_input(eqv, "Y11em:", "0.35", validator);
-    Y12em = add_double_input(eqv, "Y12em:", "0.45", validator);
-    A11em = add_double_input(eqv, "A11em:", "0.9", validator);
-    A12em = add_double_input(eqv, "A12em:", "0.3", validator);
+    Y11em = add_double_input(eqv, "Y11em:", "1.169"/*"0.35"*/, validator);
+    Y12em = add_double_input(eqv, "Y12em:", "1.253"/*"0.45"*/, validator);
+    A11em = add_double_input(eqv, "A11em:", "0.039"/*"0.9"*/, validator);
+    A12em = add_double_input(eqv, "A12em:", "0.035"/*"0.3"*/, validator);
 
     QHBoxLayout* srt = new QHBoxLayout;
     srt->addWidget(new QLabel("Initial values:",this));
