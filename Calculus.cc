@@ -310,15 +310,10 @@ struct Eiler {
 static AnswerItem make_answer_item(double t, const X& x)
 {
     AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
-    i.time=t, i.delta=x(1), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
+    i.time=t, i.delta=x(1)-x(10), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
+    //i.time=t, i.delta=x(3), i.omega=x(4), i.Eqe=x(5), i.Eqprime=x(6), i.V=x(7), i.U=x(8);
     return i;
 }
-
-struct RatherSuspiciousEqe
-{
-    double value;
-    RatherSuspiciousEqe(double v) : value(v) {}
-};
 
 QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
 {
@@ -329,7 +324,7 @@ QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
     a.push_back( make_answer_item(p.Tstart,x) );
 
     Equiv e = { 0., 0., 0., 0., 0., 0. };
-    for(double t=p.Tstart+p.dt; t<p.Tstop; t+=p.dt) try
+    for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
     {
         x = solve_newton<Eiler>(x, p, e = recalculate_equiv_params(t,x,p,e));
         a.push_back( make_answer_item(t,x) );
