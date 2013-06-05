@@ -76,7 +76,7 @@ class AMatrix
         return data[r][c];
     }
     void ensure_non_zero_diagonal_elem(size_t n) {
-	    assert(n < 12);
+        assert(n < 12);
         if(std::abs(data[n][n]) > 1e-100)
             return;
         for(size_t i=n+1; i<12; i++)
@@ -129,13 +129,21 @@ static X make_x0(const Params& p)
 
 //-----------------------------------------------------------------------
 
+// gaussforcing a NLAS
 X solve_gauss(const IMatrix& I, const X& W)
 {
+    // the AMatrix type designed specially to operate with the newton source
+    // data in a convenient way. After construction, it manipulates its rows
+    // consistently and returns the answer with properly applied signs.
     AMatrix A(I,W);
 
     // Well, actually, we know a lot about the A guts and could use some
     // tricks to reduce computations. But here we're just showing how to
-    // brutegauss LASes.
+    // brutegauss LASes. A pretty straightforward gauss elimination
+    // algorithm is implemented, though the assumption has been made that
+    // the system rank is 12.
+
+    // Rolling down, converting the matrix into an upper-triangle one
     for(size_t i=0; i<12; i++)
     {
         A.ensure_non_zero_diagonal_elem(i);
@@ -143,6 +151,7 @@ X solve_gauss(const IMatrix& I, const X& W)
         for(size_t j=i+1; j<12; j++)
             A.subst_row_mult(j,i);
     }
+    // Rolling up, making the matrix diagonal
     for(size_t k=0; k<12; k++)
     {
         const size_t i = 11-k;
@@ -162,18 +171,22 @@ struct Equiv
 
 struct NewtonDoesNotConverge {};
 
+// classical Newton solver
+// templated to provide the same framework for either eiler or trapeze methods
 template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const Equiv& e)
 {
-    // I*delta_x + W = 0
+    // incrementally solving "I*delta_x + W = 0 (where I = W')" until both W and delta_x > eps
     X x_i_1 = x_k_1;
     for(size_t max_iterations=p.max_iterations; max_iterations; max_iterations--)
     {
         const X W = Method::calculate_W(x_k_1, x_i_1, p.dt, p.reg, e);
         const IMatrix I = Method::calculate_I(x_i_1, p.dt, p.reg, e);
+        // converts our NLAS into a LAS and solves it
         const X delta_x_i = solve_gauss(I, W);
         x_i_1 += delta_x_i;
         if(W.less_then_eps(p.eps) and delta_x_i.less_then_eps(p.eps))
-            return x_i_1;
+            return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
+                          // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
     }
     throw NewtonDoesNotConverge();
 }
@@ -225,7 +238,7 @@ struct Eiler {
         W(4) = X4 - X4_k - (dt/r.Tg)*(r.K1u/r.Tu*(r.Ur0 - U - X3/r.K0u) - X4);
         W(5) = X5 - X5_k - (dt/r.Tphi)*(V - X5);
         W(6) = X6 - X6_k - (dt/r.Tf)*((V - X5)/r.Tphi - X6);
-        W(7) = X8 - X8_k - (dt/r.Tf)*r.K0f*((V - X5)/r.Tphi - X6) - dt/r.T*X8;
+        W(7) = X8 - X8_k - (dt/r.Tf)*r.K0f*((V - X5)/r.Tphi - X6) + dt/r.T*X8;
         W(8) = X9 - X9_k - (dt/r.Tg)*(r.K1f/r.Tf*((V - X5)/r.Tphi - X6) - r.K1f/r.K0f/r.T*X8 - X9);
         W(9) = Eqe - Eqe_k - (dt/r.Te)*(X3 + X4 + X8 + X9 + e.Upphi - Eqe);
         W(10) = Eqprime*U/r.Xdprime*sin(d_v) - U*U*Xdp*sin(2*d_v)/2 - U*U*e.Y11*sin(e.A11) - U*r.Uc*e.Y12*sin(V-e.A12);
@@ -276,7 +289,7 @@ struct Eiler {
 
         I(7,6) = (dt/r.Tphi)/r.Tf*r.K0f;
         I(7,7) = I(7,6)*r.Tphi;
-        I(7,8) = 1. - dt/r.T;
+        I(7,8) = 1. + dt/r.T;
         I(7,10) = -I(7,6);
 
         I(8,6) = (dt/r.Tg)*r.K1f/r.Tf/r.Tphi;
@@ -310,8 +323,8 @@ struct Eiler {
 static AnswerItem make_answer_item(double t, const X& x)
 {
     AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
-    i.time=t, i.delta=x(1)-x(10), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
-    //i.time=t, i.delta=x(3), i.omega=x(4), i.Eqe=x(5), i.Eqprime=x(6), i.V=x(7), i.U=x(8);
+    i.time=t, i.delta=x(1), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
+    //i.time=t, i.delta=x(7), i.omega=x(4), i.Eqe=x(10), i.Eqprime=x(6), i.V=x(7), i.U=x(8);
     return i;
 }
 
@@ -320,12 +333,14 @@ QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
     QVector<AnswerItem> a;
     a.reserve((p.Tstop-p.Tstart)/p.dt+1);
 
-    X x = make_x0(p);
-    a.push_back( make_answer_item(p.Tstart,x) );
+    X x = make_x0(p); // initial vector according to the blueprint
+    a.push_back( make_answer_item(p.Tstart,x) ); // accepting it as a valid datum
 
-    Equiv e = { 0., 0., 0., 0., 0., 0. };
+    Equiv e = { 0., 0., 0., 0., 0., 0. }; // to ensure thar Upphi starts with 0.
     for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
     {
+        // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
+        // as our newton implementation is able to return a new step value, omit some arithmetics
         x = solve_newton<Eiler>(x, p, e = recalculate_equiv_params(t,x,p,e));
         a.push_back( make_answer_item(t,x) );
         emit a_step_done();
@@ -374,7 +389,7 @@ struct Trapeze {
         W(4) = X4 - X4_k - dt/reg.Tg/2.*(2.*reg.K1u/reg.Tu*reg.Ur0 - reg.K1u/reg.Tu*(U + U_k) - reg.K1u/reg.K0u/reg.Tu*(X3 + X3_k) - X4 - X4_k);
         W(5) = X5 - X5_k - dt/reg.Tphi/2.*(V + V_k - X5 - X5_k);
         W(6) = X6 - X6_k - dt/reg.Tf/2.*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k);
-        W(7) = X8 - X8_k - dt/reg.Tf/2.*reg.K0f*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k) - dt/reg.T*(X8 + X8_k);
+        W(7) = X8 - X8_k - dt/reg.Tf/2.*reg.K0f*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k) + dt/reg.T*(X8 + X8_k);
         W(8) = X9 - X9_k - dt/reg.Tg/2.*(reg.K1f/reg.Tf*((V + V_k - X5 - X5_k)/reg.Tphi - X6 - X6_k)
                 - reg.K1f/reg.K0f/reg.T*(X8 + X8_k) - X9 - X9_k);
         W(9) = Eqe - Eqe_k - dt/reg.Te/2.*(X3 + X3_k + X4 + X4_k + X8 + X8_k + X9 + X9_k + 2.*e.Upphi - Eqe - Eqe_k);
@@ -426,7 +441,7 @@ struct Trapeze {
 
         I(7,6) = dt/reg.Tphi/reg.Tf/2.*reg.K0f;
         I(7,7) = I(7,6)*reg.Tphi;
-        I(7,8) = 1. - dt/reg.T/2.;
+        I(7,8) = 1. + dt/reg.T/2.;
         I(7,10) = -I(7,6);
 
         I(8,6) = dt/reg.Tg/reg.Tf/reg.Tphi/2.*reg.K1f;
@@ -450,12 +465,24 @@ struct Trapeze {
         I(11,2) = U/reg.Xdprime*cos(d_v);
         I(11,10) = -I(11,1) - U*reg.Uc*e.Y12*sin(V-e.A12);
         I(11,11) = Eqprime/reg.Xdprime*cos(d_v) - 2*U/reg.Xdprime*cos(d_v)*cos(d_v) - 2*U/reg.Xd*sin(d_v)*sin(d_v) + reg.Uc*e.Y12*cos(V-e.A12) - 2*U*e.Y11*cos(e.A11);
+
+        const Params::Consts& r = reg;
+        I(10,1) = Eqprime*U/r.Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v);
+        I(10,2) = U/r.Xdprime*sin(d_v);
+        I(10,10) = -I(10,1) - U*r.Uc*e.Y12*cos(V-e.A12);
+        I(10,11) = -r.Uc*e.Y12*sin(V-e.A12) - 2.*U*e.Y11*sin(e.A11) + Eqprime/r.Xdprime*sin(d_v) - U*Xdp*sin(2.*d_v);
+
+        I(11,1) = U*U*Xdp*sin(2*d_v) - Eqprime*U/r.Xdprime*sin(d_v);
+        I(11,2) = U/r.Xdprime*cos(d_v);
+        I(11,10) = -I(11,1) - U*r.Uc*e.Y12*sin(V-e.A12);
+        I(11,11) = Eqprime/r.Xdprime*cos(d_v) - 2*U*(cos(d_v)*cos(d_v)/r.Xdprime + sin(d_v)*sin(d_v)/r.Xd) - 2*U*e.Y11*cos(e.A11) + r.Uc*e.Y12*cos(V-e.A12);
         return I;
     }
 };
 
 //-----------------------------------------------------------------------
 
+// does real work and emits signal on every time step to update a progress bar
 QVector<AnswerItem> CalculusTrapeze::doWork(const Params& p)
 {
     QVector<AnswerItem> a;
