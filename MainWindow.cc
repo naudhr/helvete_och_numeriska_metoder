@@ -69,7 +69,7 @@ void CentralWidget::start()
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
-static QLineEdit* add_double_input(QBoxLayout* layout, const char* label, const char* value, QValidator* validator)
+static QLineEdit* add_double_input(QBoxLayout* layout, const QString& label, const char* value, QValidator* validator)
 {
     layout->addStretch(1);
     layout->addWidget(new QLabel(label));
@@ -79,7 +79,7 @@ static QLineEdit* add_double_input(QBoxLayout* layout, const char* label, const 
     return edit;
 }
 
-static QwtPlotCurve* add_plot_curve(const char* label, int r, int g, int b)
+static QwtPlotCurve* add_plot_curve(const QString& label, int r, int g, int b)
 {
     QwtPlotCurve* curve = new QwtPlotCurve(label);
     curve->setRenderHint(QwtPlotItem::RenderAntialiased);
@@ -94,29 +94,29 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
 
     QHBoxLayout* eqv = new QHBoxLayout;
     eqv->addWidget(new QLabel("Equivalent circuit parameters:",this));
-    Y11 = add_double_input(eqv, "Y11:", "1.169"/*"0.496"*/, validator);
-    Y12 = add_double_input(eqv, "Y12:", "1.253"/*"0.532"*/, validator);
-    A11 = add_double_input(eqv, "A11:", "0.039"/*"0.958"*/, validator);
-    A12 = add_double_input(eqv, "A12:", "0.035"/*"0.715"*/, validator);
+    Y11 = add_double_input(eqv, "Y11:", "1.456", validator);
+    Y12 = add_double_input(eqv, "Y12:", "1.573", validator);
+    A11 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11:"), "0.051190507", validator);
+    A12 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12:"), "0.042743113", validator);
     Pd = add_double_input(eqv, "Pd:", "5", validator);
-    Y11em = add_double_input(eqv, "Y11em:", "1.169"/*"0.35"*/, validator);
-    Y12em = add_double_input(eqv, "Y12em:", "1.253"/*"0.45"*/, validator);
-    A11em = add_double_input(eqv, "A11em:", "0.039"/*"0.9"*/, validator);
-    A12em = add_double_input(eqv, "A12em:", "0.035"/*"0.3"*/, validator);
+    Y11em = add_double_input(eqv, "Y11em:", "1.456", validator);
+    Y12em = add_double_input(eqv, "Y12em:", "1.573", validator);
+    A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11em:"), "0.051190507", validator);
+    A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12em:"), "0.042743113", validator);
 
     QHBoxLayout* srt = new QHBoxLayout;
     srt->addWidget(new QLabel("Initial values:",this));
-    Delta0 = add_double_input(srt, "Delta0:", "1.365", validator);
-    Eqe0 = add_double_input(srt, "Eqe0:", "1.87", validator);
-    Eqprime0 = add_double_input(srt, "Eqprime0:", "1.1", validator);
-    U0 = add_double_input(srt, "U0:", "1.059", validator);
-    V0 = add_double_input(srt, "V0:", "0.597", validator);
+    Delta0 = add_double_input(srt, "Delta0:", "0.620185296", validator);
+    Eqe0 = add_double_input(srt, "Eqe0:", "1.066", validator);
+    Eqprime0 = add_double_input(srt, "Eqprime0:", "1.066", validator);
+    U0 = add_double_input(srt, "U0:", "1.035", validator);
+    V0 = add_double_input(srt, "V0:", "0.353132468", validator);
 
     QHBoxLayout* cpt = new QHBoxLayout;
     cpt->addWidget(new QLabel("Computational parameters:",this));
     Tstart = add_double_input(cpt, "Tstart:", "0", validator);
     Tstop = add_double_input(cpt, "Tstop:", "3", validator);
-    dt = add_double_input(cpt, "dt:", "0.0001", validator);
+    dt = add_double_input(cpt, "dt:", "0.001", validator);
     eps = add_double_input(cpt, "eps:", "0.005", validator);
     max_iterations = add_double_input(cpt, "max_iterations:", "50", validator);
     max_iterations->setValidator(new QIntValidator(5,5000,this));
@@ -146,14 +146,14 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
 
     plot = new QwtPlot(this);
 
-    curve_eiler_Delta = add_plot_curve("\\Delta - \\Nu Eiler",160,0,210);
-    curve_eiler_Omega = add_plot_curve("Omega Eiler",210,0,0);
+    curve_eiler_Delta = add_plot_curve(QChar(0x03b4)+QLatin1String(" Eiler"),160,0,210);
+    curve_eiler_Omega = add_plot_curve(QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler"),210,0,0);
     curve_eiler_Eqe = add_plot_curve("Eqe Eiler",5,205,0);
     curve_eiler_Eqprime = add_plot_curve("Eqprime Eiler",210,120,0);
     curve_eiler_U = add_plot_curve("U Eiler",0,0,0);
 
-    curve_trapeze_Delta = add_plot_curve("\\Delta - \\Nu Trapeze",210,50,255);
-    curve_trapeze_Omega = add_plot_curve("Omega Trapeze",255,45,45);
+    curve_trapeze_Delta = add_plot_curve(QChar(0x03b4)+QLatin1String(" Trapeze"),210,50,255);
+    curve_trapeze_Omega = add_plot_curve(QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze"),255,45,45);
     curve_trapeze_Eqe = add_plot_curve("Eqe Trapeze",50,255,50);
     curve_trapeze_Eqprime = add_plot_curve("Eqprime Trapeze",255,160,50);
     curve_trapeze_U = add_plot_curve("U Trapeze",60,60,60);
@@ -393,29 +393,29 @@ SystemParamsWidget::SystemParamsWidget(QWidget* p) : QWidget(p)
 
     QGroupBox *reg = new QGroupBox("Regulator parameters:", this);
     QHBoxLayout* reg_l = new QHBoxLayout(reg);
-    K0f = add_double_input(reg_l, "K0f:", "10", validator);
-    K1f = add_double_input(reg_l, "K1f:", "0.5", validator);
+    K0f = add_double_input(reg_l, "K0f:", "6", validator);
+    K1f = add_double_input(reg_l, "K1f:", "0.3", validator);
     Ur0 = add_double_input(reg_l, "Ur0:", "1.05", validator);
-    K0u = add_double_input(reg_l, "K0u:", "50", validator);
-    K1u = add_double_input(reg_l, "K1u:", "3.6", validator);
+    K0u = add_double_input(reg_l, "K0u:", "100", validator);
+    K1u = add_double_input(reg_l, "K1u:", "5", validator);
 
     QGroupBox* tms = new QGroupBox("Time scales:",this);
     QHBoxLayout* tms_l = new QHBoxLayout(tms);
     T = add_double_input(tms_l, "T:", "1", validator);
-    Ty = add_double_input(tms_l, "Tj:", "5.1", validator);
+    Ty = add_double_input(tms_l, "Tj:", "5.59", validator);
     Tu = add_double_input(tms_l, "Tu:", "0.05", validator);
     Tg = add_double_input(tms_l, "Tg:", "0.02", validator);
     Te = add_double_input(tms_l, "Te:", "0.03", validator);
     Tf = add_double_input(tms_l, "Tf:", "0.05", validator);
     Tphi = add_double_input(tms_l, "Tphi:", "0.05", validator);
-    Td0 = add_double_input(tms_l, "Td0:", "5.87", validator);
+    Td0 = add_double_input(tms_l, "Td0:", "7", validator);
 
     QGroupBox* oth = new QGroupBox("Other constants:",this);
     QHBoxLayout* oth_l = new QHBoxLayout(oth);
     Pt0 = add_double_input(oth_l, "Pt0:", "1", validator);
-    omega_nom = add_double_input(oth_l, "omega_nom:", "18000", validator);
-    Xdprime = add_double_input(oth_l, "Xd':", "0.207", validator);
-    Xd = add_double_input(oth_l, "Xd:", "1.364", validator);
+    omega_nom = add_double_input(oth_l, "omega_nom:", "314.1592653589793", validator);
+    Xdprime = add_double_input(oth_l, "Xd':", "0.291", validator);
+    Xd = add_double_input(oth_l, "Xd:", "2.13", validator);
     Eqenom = add_double_input(oth_l, "Eqenom:", "1.87", validator);
     Uc = add_double_input(oth_l, "Uc:", "1", validator);
 
