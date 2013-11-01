@@ -5,7 +5,7 @@ TARGET = honm
 DEPENDPATH += .
 INCLUDEPATH += .
 
-CONFIG += qwt release
+CONFIG += qwt release qaxcontainer
 CONFIG -= debug
 
 

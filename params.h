@@ -24,4 +24,12 @@ struct AnswerItem
     double time, delta, omega, Eqe, Eqprime, V, U;
 };
 
+struct x2_U_D_E
+{
+    bool e, t;
+    double Ue, De, Ee;
+    double Ut, Dt, Et;
+    x2_U_D_E() : e(false), t(false) {}
+};
+
 #endif // __PARAMS_H_

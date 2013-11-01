@@ -7,8 +7,10 @@
 
 class QTabWidget;
 class QPushButton;
+class QTableWidget;
 class CalculusWidget;
 class SystemParamsWidget;
+class ToExcel;
 
 class MainWindow : public QMainWindow
 {
@@ -22,6 +24,7 @@ class CentralWidget : public QWidget
     Q_OBJECT
 
     QTabWidget* tabs;
+    ToExcel* to_excel;
     CalculusWidget* calculus;
     SystemParamsWidget* sysparams;
     QPushButton* start_button;
@@ -82,6 +85,7 @@ class CalculusWidget : public QWidget
     void plot_answer_trapeze(const QVector<AnswerItem> ans);
   signals:
     void enable_start_button(bool);
+    void to_excel_populate(double, QVector<x2_U_D_E>);
   public:
     CalculusWidget(QWidget* );
     ~CalculusWidget();
@@ -96,6 +100,19 @@ class SystemParamsWidget : public QWidget
   public:
     SystemParamsWidget(QWidget* );
     Params::Consts collect_params();
+};
+
+class ToExcel : public QWidget
+{
+    Q_OBJECT
+
+    QTableWidget* table;
+  public:
+    ToExcel(QWidget* );
+  private slots:
+    void export_to_excel();
+  public slots:
+    void populate(double dt, const QVector<x2_U_D_E>& data);
 };
 
 #endif // __MAIN_WINDOW_H_

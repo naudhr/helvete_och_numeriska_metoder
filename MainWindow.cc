@@ -12,6 +12,10 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QDoubleValidator>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QHeaderView>
+//#include <QAxObject>
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_legend.h>
@@ -54,9 +58,11 @@ CentralWidget::CentralWidget() : QWidget(NULL)
 
     tabs->addTab(calculus = new CalculusWidget(this), "Calculus");
     tabs->addTab(sysparams = new SystemParamsWidget(this), "System Parameters");
+    tabs->addTab(to_excel = new ToExcel(this), "Table Data");
 
     connect(start_button, SIGNAL(clicked()), SLOT(start()));
     connect(calculus, SIGNAL(enable_start_button(bool)), start_button, SLOT(setEnabled(bool)));
+    connect(calculus, SIGNAL(to_excel_populate(double, QVector<x2_U_D_E>)), to_excel, SLOT(populate(double, QVector<x2_U_D_E>)));
 }
 
 void CentralWidget::start()
@@ -230,6 +236,8 @@ void CalculusWidget::start(const Params::Consts& reg)
     p.reg = reg;
     const size_t n = (p.Tstop - p.Tstart)/p.dt;
 
+    QVector<x2_U_D_E> x2(n);
+
     plot->setAxisScale(QwtPlot::xBottom,p.Tstart-p.dt,p.Tstop+p.dt);
 
     if( enable_eiler->isChecked() )
@@ -240,7 +248,15 @@ void CalculusWidget::start(const Params::Consts& reg)
 
         CalculusEiler e;
         connect(&e, SIGNAL(a_step_done()), SLOT(increment_eiler()));
-        plot_answer_eiler(e.doWork(p));
+        const QVector<AnswerItem> ans = e.doWork(p);
+        for(size_t i=0; i<n and i<ans.size(); i++)
+        {
+            x2[i].e = true;
+            x2[i].Ue = ans[i].U;
+            x2[i].De = ans[i].delta;
+            x2[i].Ee = ans[i].Eqe;
+        }
+        plot_answer_eiler(ans);
     }
 /*
     auto e = new CalculusEiler(p);
@@ -260,8 +276,18 @@ void CalculusWidget::start(const Params::Consts& reg)
 
         CalculusTrapeze t;
         connect(&t, SIGNAL(a_step_done()), SLOT(increment_trapeze()));
-        plot_answer_trapeze(t.doWork(p));
+        const QVector<AnswerItem> ans = t.doWork(p);
+        for(size_t i=0; i<n and i<ans.size(); i++)
+        {
+            x2[i].t = true;
+            x2[i].Ut = ans[i].U;
+            x2[i].Dt = ans[i].delta;
+            x2[i].Et = ans[i].Eqe;
+        }
+        plot_answer_trapeze(ans);
     }
+
+    emit(to_excel_populate(p.dt, x2));
 
     plot->setAxisAutoScale(QwtPlot::xBottom);
     plot->setAxisAutoScale(QwtPlot::yLeft);
@@ -448,5 +474,57 @@ Params::Consts SystemParamsWidget::collect_params()
     c.Eqenom = Eqenom->text().toDouble();
     c.Uc = Uc->text().toDouble();
     return c;
+}
+
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+
+ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
+{
+    table = new QTableWidget(this);
+    table->setColumnCount(7);
+    QStringList vh;
+    vh << "Time" << (QChar(0x03b4)+QLatin1String(" Eiler")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler")) << "Eqe Eiler"
+                 << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze")) << "Eqe Trapeze";
+    table->setHorizontalHeaderLabels(vh);
+    table->verticalHeader()->setVisible(false);
+    table->setSortingEnabled(false);
+
+    QPushButton* button = new QPushButton("Export to Excel",this);
+    connect(button, SIGNAL(clicked()), SLOT(export_to_excel()));
+    button->setVisible(false);
+
+    QVBoxLayout* l = new QVBoxLayout(this);
+    l->addWidget(table);
+    l->addWidget(button);
+}
+
+void ToExcel::populate(double dt, const QVector<x2_U_D_E>& data)
+{
+    table->setRowCount(data.size());
+    for(int row=0; row<data.size(); row++)
+    {
+        table->setItem(row, 0, new QTableWidgetItem(QString::number(dt*row)));
+        table->setItem(row, 1, new QTableWidgetItem(data[row].e ? QString::number(data[row].Ue) : ""));
+        table->setItem(row, 2, new QTableWidgetItem(data[row].e ? QString::number(data[row].De) : ""));
+        table->setItem(row, 3, new QTableWidgetItem(data[row].e ? QString::number(data[row].Ee) : ""));
+        table->setItem(row, 4, new QTableWidgetItem(data[row].t ? QString::number(data[row].Ut) : ""));
+        table->setItem(row, 5, new QTableWidgetItem(data[row].t ? QString::number(data[row].Dt) : ""));
+        table->setItem(row, 6, new QTableWidgetItem(data[row].t ? QString::number(data[row].Et) : ""));
+    }
+}
+
+void ToExcel::export_to_excel()
+{
+    /*
+    QAxObject* excel = new QAxObject("Excel.Application", 0);
+    QAxObject* app = excel->querySubObject("Application()");
+    QAxObject* wbks = excel->querySubObject("Workbooks()");
+    QAxObject* wb = wbks->querySubObject("Add()");
+    QAxObject* ws = wb->querySubObject("Worksheets(int)", 1 );
+
+    //Show Excel
+    app->setProperty("Visible", true );
+    */
 }
 
