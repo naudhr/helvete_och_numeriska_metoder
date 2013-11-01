@@ -15,7 +15,8 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QHeaderView>
-//#include <QAxObject>
+#include <QFileDialog>
+#include <QFile>
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_legend.h>
@@ -236,7 +237,7 @@ void CalculusWidget::start(const Params::Consts& reg)
     p.reg = reg;
     const size_t n = (p.Tstop - p.Tstart)/p.dt;
 
-    QVector<x2_U_D_E> x2(n);
+    QVector<x2_U_D_E> x2(n+1);
 
     plot->setAxisScale(QwtPlot::xBottom,p.Tstart-p.dt,p.Tstop+p.dt);
 
@@ -249,7 +250,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         CalculusEiler e;
         connect(&e, SIGNAL(a_step_done()), SLOT(increment_eiler()));
         const QVector<AnswerItem> ans = e.doWork(p);
-        for(size_t i=0; i<n and i<ans.size(); i++)
+        for(size_t i=0; i<=n and i<ans.size(); i++)
         {
             x2[i].e = true;
             x2[i].Ue = ans[i].U;
@@ -268,7 +269,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         CalculusTrapeze t;
         connect(&t, SIGNAL(a_step_done()), SLOT(increment_trapeze()));
         const QVector<AnswerItem> ans = t.doWork(p);
-        for(size_t i=0; i<n and i<ans.size(); i++)
+        for(size_t i=0; i<=n and i<ans.size(); i++)
         {
             x2[i].t = true;
             x2[i].Ut = ans[i].U;
@@ -474,9 +475,9 @@ ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
     table->verticalHeader()->setVisible(false);
     table->setSortingEnabled(false);
 
-    QPushButton* button = new QPushButton("Export to Excel",this);
+    QPushButton* button = new QPushButton("Save to file (then you can open it with Excel)",this);
     connect(button, SIGNAL(clicked()), SLOT(export_to_excel()));
-    button->setVisible(false);
+    //button->setVisible(false);
 
     QVBoxLayout* l = new QVBoxLayout(this);
     l->addWidget(table);
@@ -500,15 +501,30 @@ void ToExcel::populate(double dt, const QVector<x2_U_D_E>& data)
 
 void ToExcel::export_to_excel()
 {
-    /*
-    QAxObject* excel = new QAxObject("Excel.Application", 0);
-    QAxObject* app = excel->querySubObject("Application()");
-    QAxObject* wbks = excel->querySubObject("Workbooks()");
-    QAxObject* wb = wbks->querySubObject("Add()");
-    QAxObject* ws = wb->querySubObject("Worksheets(int)", 1 );
+    const QString fn = QFileDialog::getSaveFileName(this,"Save to file","","Capable to import with Excel (*.csv)");
+    QFile file(fn);
+    if(not file.open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+    
+    QTextStream out(&file);
 
-    //Show Excel
-    app->setProperty("Visible", true );
-    */
+    out << table->horizontalHeaderItem(0)->text() << '\t'
+        << table->horizontalHeaderItem(1)->text() << '\t'
+        << table->horizontalHeaderItem(2)->text() << '\t'
+        << table->horizontalHeaderItem(3)->text() << '\t'
+        << table->horizontalHeaderItem(4)->text() << '\t'
+        << table->horizontalHeaderItem(5)->text() << '\t'
+        << table->horizontalHeaderItem(6)->text() << '\n';
+
+    for(int r=0; r<table->rowCount(); r++)
+        out << table->item(r,0)->text() << '\t'
+            << table->item(r,1)->text() << '\t'
+            << table->item(r,2)->text() << '\t'
+            << table->item(r,3)->text() << '\t'
+            << table->item(r,4)->text() << '\t'
+            << table->item(r,5)->text() << '\t'
+            << table->item(r,6)->text() << '\n';
+
+    
 }
 
