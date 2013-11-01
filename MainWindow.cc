@@ -100,21 +100,21 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
 
     QHBoxLayout* eqv = new QHBoxLayout;
     eqv->addWidget(new QLabel("Equivalent circuit parameters:",this));
-    Y11 = add_double_input(eqv, "Y11:", "1.456", validator);
-    Y12 = add_double_input(eqv, "Y12:", "1.573", validator);
-    A11 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11:"), "0.051190507", validator);
-    A12 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12:"), "0.042743113", validator);
+    Y11 = add_double_input(eqv, "Y11:", "2.523", validator);
+    Y12 = add_double_input(eqv, "Y12:", "2.726", validator);
+    A11 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11:"), "0.089", validator);
+    A12 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12:"), "0.08", validator);
     Pd = add_double_input(eqv, "Pd:", "5", validator);
-    Y11em = add_double_input(eqv, "Y11em:", "1.456", validator);
-    Y12em = add_double_input(eqv, "Y12em:", "1.573", validator);
-    A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11em:"), "0.051190507", validator);
-    A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12em:"), "0.042743113", validator);
+    Y11em = add_double_input(eqv, "Y11em:", "3.085", validator);
+    Y12em = add_double_input(eqv, "Y12em:", "1.862", validator);
+    A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11em:"), "0.081", validator);
+    A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12em:"), "0.078", validator);
 
     QHBoxLayout* srt = new QHBoxLayout;
     srt->addWidget(new QLabel("Initial values:",this));
     Delta0 = add_double_input(srt, "Delta0:", "0.620185296", validator);
-    Eqe0 = add_double_input(srt, "Eqe0:", "1.066", validator);
-    Eqprime0 = add_double_input(srt, "Eqprime0:", "1.066", validator);
+    Eqe0 = add_double_input(srt, "Eqe0:", "2.79", validator);
+    Eqprime0 = add_double_input(srt, "Eqprime0:", "0.759", validator);
     U0 = add_double_input(srt, "U0:", "1.035", validator);
     V0 = add_double_input(srt, "V0:", "0.353132468", validator);
 
@@ -258,16 +258,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         }
         plot_answer_eiler(ans);
     }
-/*
-    auto e = new CalculusEiler(p);
-    auto t = new QThread(this);
-    connect(t, SIGNAL(started()), e, SLOT(doWork()), Qt::QueuedConnection);
-    connect(t, SIGNAL(finished()), e, SLOT(deleteLater()), Qt::QueuedConnection);
-    connect(e, SIGNAL(a_step_done()), this, SLOT(increment_eiler()), Qt::QueuedConnection);
-    connect(e, SIGNAL(answer(Answer)), this, SLOT(plot_answer(Answer)), Qt::QueuedConnection);
-    e->moveToThread(t);
-    t->start();
-*/
+
     if( enable_trapeze->isChecked() )
     {
         progress_bar_trapeze->setMaximum(n);
@@ -371,13 +362,6 @@ void CalculusWidget::plot_answer_eiler(const QVector<AnswerItem> ans)
     curve_eiler_Omega->setVisible(true);
     curve_eiler_Eqprime->setVisible(true);
     curve_eiler_Eqe->setVisible(true);
-/*
-    double min = std::min(std::min(std::min(min_delta,min_omega),min_Eqprime),min_Eqe);
-    double max = std::max(std::max(std::max(max_delta,max_omega),max_Eqprime),max_Eqe);
-    plot->setAxisScale(QwtPlot::yLeft,min,max);
-    qDebug()<<"plot->setVisible(true): max"<<max<<"max_delta"<<max_delta<<"max_omega"<<max_omega<<"max_Eqprime"<<max_Eqprime<<"max_Eqe"<<max_Eqe;
-    qDebug()<<"plot->setVisible(true): min"<<min<<"min_delta"<<min_delta<<"min_omega"<<min_omega<<"min_Eqprime"<<min_Eqprime<<"min_Eqe"<<min_Eqe;
-    */
 }
 
 void CalculusWidget::plot_answer_trapeze(const QVector<AnswerItem> ans)
@@ -419,7 +403,7 @@ SystemParamsWidget::SystemParamsWidget(QWidget* p) : QWidget(p)
 
     QGroupBox *reg = new QGroupBox("Regulator parameters:", this);
     QHBoxLayout* reg_l = new QHBoxLayout(reg);
-    K0f = add_double_input(reg_l, "K0f:", "6", validator);
+    K0f = add_double_input(reg_l, "K0f:", "4", validator);
     K1f = add_double_input(reg_l, "K1f:", "0.3", validator);
     Ur0 = add_double_input(reg_l, "Ur0:", "1.05", validator);
     K0u = add_double_input(reg_l, "K0u:", "100", validator);
@@ -440,9 +424,9 @@ SystemParamsWidget::SystemParamsWidget(QWidget* p) : QWidget(p)
     QHBoxLayout* oth_l = new QHBoxLayout(oth);
     Pt0 = add_double_input(oth_l, "Pt0:", "1", validator);
     omega_nom = add_double_input(oth_l, "omega_nom:", "314.1592653589793", validator);
-    Xdprime = add_double_input(oth_l, "Xd':", "0.291", validator);
-    Xd = add_double_input(oth_l, "Xd:", "2.13", validator);
-    Eqenom = add_double_input(oth_l, "Eqenom:", "1.87", validator);
+    Xdprime = add_double_input(oth_l, "Xd':", "0.194", validator);
+    Xd = add_double_input(oth_l, "Xd:", "1.42", validator);
+    Eqenom = add_double_input(oth_l, "Eqenom:", "2.79", validator);
     Uc = add_double_input(oth_l, "Uc:", "1", validator);
 
     QVBoxLayout* l = new QVBoxLayout(this);
