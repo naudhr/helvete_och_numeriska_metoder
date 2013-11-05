@@ -185,8 +185,13 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
         const X delta_x_i = solve_gauss(I, W);
         x_i_1 += delta_x_i;
         if(W.less_then_eps(p.eps) and delta_x_i.less_then_eps(p.eps))
+        {
+            // rather dirty hack
+            x_i_1(3) = qMin(x_i_1(3), 2*p.reg.Eqenom);
+            x_i_1(3) = qMax(x_i_1(3), 0.);
             return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
+        }
     }
     throw NewtonDoesNotConverge();
 }

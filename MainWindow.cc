@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
   QApplication qapp(argc,argv);
 
   MainWindow w;
-  w.show();
+  w.showMaximized();
   return qapp.exec();
 }
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 MainWindow::MainWindow() : QMainWindow(NULL)
 {
     setCentralWidget(new CentralWidget);
-    setFixedSize(1600,900);
+    //setFixedSize(1600,900);
 }
 
 //-----------------------------------------------------------------------
@@ -106,18 +106,18 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     A11 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11:"), "0.089", validator);
     A12 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12:"), "0.08", validator);
     Pd = add_double_input(eqv, "Pd:", "5", validator);
-    Y11em = add_double_input(eqv, "Y11em:", "3.085", validator);
-    Y12em = add_double_input(eqv, "Y12em:", "1.862", validator);
-    A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11em:"), "0.081", validator);
-    A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12em:"), "0.078", validator);
+    Y11em = add_double_input(eqv, "Y11av:", "3.085", validator);
+    Y12em = add_double_input(eqv, "Y12av:", "1.862", validator);
+    A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11av:"), "0.081", validator);
+    A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12av:"), "0.078", validator);
 
     QHBoxLayout* srt = new QHBoxLayout;
     srt->addWidget(new QLabel("Initial values:",this));
-    Delta0 = add_double_input(srt, "Delta0:", "0.620185296", validator);
-    Eqe0 = add_double_input(srt, "Eqe0:", "2.79", validator);
+    Delta0 = add_double_input(srt, "Delta0:", "1.294", validator);
+    Eqe0 = add_double_input(srt, "Eqe0:", "1.698", validator);
     Eqprime0 = add_double_input(srt, "Eqprime0:", "0.759", validator);
     U0 = add_double_input(srt, "U0:", "1.035", validator);
-    V0 = add_double_input(srt, "V0:", "0.353132468", validator);
+    V0 = add_double_input(srt, "V0:", "0.353", validator);
 
     QHBoxLayout* cpt = new QHBoxLayout;
     cpt->addWidget(new QLabel("Computational parameters:",this));
@@ -404,11 +404,11 @@ SystemParamsWidget::SystemParamsWidget(QWidget* p) : QWidget(p)
 
     QGroupBox *reg = new QGroupBox("Regulator parameters:", this);
     QHBoxLayout* reg_l = new QHBoxLayout(reg);
-    K0f = add_double_input(reg_l, "K0f:", "4", validator);
-    K1f = add_double_input(reg_l, "K1f:", "0.3", validator);
-    Ur0 = add_double_input(reg_l, "Ur0:", "1.05", validator);
-    K0u = add_double_input(reg_l, "K0u:", "100", validator);
-    K1u = add_double_input(reg_l, "K1u:", "5", validator);
+    K0f = add_double_input(reg_l, "K0f:", "1", validator);
+    K1f = add_double_input(reg_l, "K1f:", "0.1", validator);
+    Ur0 = add_double_input(reg_l, "Ur0:", "1.04", validator);
+    K0u = add_double_input(reg_l, "K0u:", "50", validator);
+    K1u = add_double_input(reg_l, "K1u:", "3.6", validator);
 
     QGroupBox* tms = new QGroupBox("Time scales:",this);
     QHBoxLayout* tms_l = new QHBoxLayout(tms);
