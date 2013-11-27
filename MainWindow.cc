@@ -235,7 +235,7 @@ void CalculusWidget::start(const Params::Consts& reg)
 
     Params p = collect_params();
     p.reg = reg;
-    const size_t n = (p.Tstop - p.Tstart)/p.dt;
+    const int n = (p.Tstop - p.Tstart)/p.dt;
 
     QVector<x2_U_D_E> x2(n+1);
 
@@ -250,7 +250,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         CalculusEiler e;
         connect(&e, SIGNAL(a_step_done()), SLOT(increment_eiler()));
         const QVector<AnswerItem> ans = e.doWork(p);
-        for(size_t i=0; i<=n and i<ans.size(); i++)
+        for(int i=0; i<=n and i<ans.size(); i++)
         {
             x2[i].e = true;
             x2[i].Ue = ans[i].U;
@@ -269,7 +269,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         CalculusTrapeze t;
         connect(&t, SIGNAL(a_step_done()), SLOT(increment_trapeze()));
         const QVector<AnswerItem> ans = t.doWork(p);
-        for(size_t i=0; i<=n and i<ans.size(); i++)
+        for(int i=0; i<=n and i<ans.size(); i++)
         {
             x2[i].t = true;
             x2[i].Ut = ans[i].U;
@@ -302,7 +302,7 @@ void CalculusWidget::enable_everything(bool e)
 
 Params CalculusWidget::collect_params()
 {
-    Params p = {};
+    Params p;// = {};
     p.repl.Pd = Pd->text().toDouble();
     p.repl.Y11 = Y11->text().toDouble();
     p.repl.Y12 = Y12->text().toDouble();
@@ -505,24 +505,25 @@ void ToExcel::export_to_excel()
     QFile file(fn);
     if(not file.open(QIODevice::WriteOnly | QIODevice::Text))
         return;
-    
-    QTextStream out(&file);
 
-    out << table->horizontalHeaderItem(0)->text() << '\t'
-        << table->horizontalHeaderItem(1)->text() << '\t'
-        << table->horizontalHeaderItem(2)->text() << '\t'
-        << table->horizontalHeaderItem(3)->text() << '\t'
-        << table->horizontalHeaderItem(4)->text() << '\t'
-        << table->horizontalHeaderItem(5)->text() << '\t'
+    QTextStream out(&file);
+    const char delimiter = ';';
+
+    out << table->horizontalHeaderItem(0)->text() << delimiter
+        << table->horizontalHeaderItem(1)->text() << delimiter
+        << table->horizontalHeaderItem(2)->text() << delimiter
+        << table->horizontalHeaderItem(3)->text() << delimiter
+        << table->horizontalHeaderItem(4)->text() << delimiter
+        << table->horizontalHeaderItem(5)->text() << delimiter
         << table->horizontalHeaderItem(6)->text() << '\n';
 
     for(int r=0; r<table->rowCount(); r++)
-        out << table->item(r,0)->text() << '\t'
-            << table->item(r,1)->text() << '\t'
-            << table->item(r,2)->text() << '\t'
-            << table->item(r,3)->text() << '\t'
-            << table->item(r,4)->text() << '\t'
-            << table->item(r,5)->text() << '\t'
+        out << table->item(r,0)->text() << delimiter
+            << table->item(r,1)->text() << delimiter
+            << table->item(r,2)->text() << delimiter
+            << table->item(r,3)->text() << delimiter
+            << table->item(r,4)->text() << delimiter
+            << table->item(r,5)->text() << delimiter
             << table->item(r,6)->text() << '\n';
 
     
