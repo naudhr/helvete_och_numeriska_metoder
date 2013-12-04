@@ -518,12 +518,12 @@ void ToExcel::export_to_excel()
         << table->horizontalHeaderItem(6)->text() << '\n';
 
     for(int r=0; r<table->rowCount(); r++)
-        out << table->item(r,0)->text() << delimiter
-            << table->item(r,1)->text() << delimiter
-            << table->item(r,2)->text() << delimiter
-            << table->item(r,3)->text() << delimiter
-            << table->item(r,4)->text() << delimiter
-            << table->item(r,5)->text() << delimiter
+        out << table->item(r,0)->text().replace('.',',') << delimiter
+            << table->item(r,1)->text().replace('.',',') << delimiter
+            << table->item(r,2)->text().replace('.',',') << delimiter
+            << table->item(r,3)->text().replace('.',',') << delimiter
+            << table->item(r,4)->text().replace('.',',') << delimiter
+            << table->item(r,5)->text().replace('.',',') << delimiter
             << table->item(r,6)->text() << '\n';
 
     
