@@ -7,21 +7,24 @@
 //struct Params;
 //struct AnswerItem;
 
-class CalculusEiler : public QObject
+class Calculus : public QObject
 {
     Q_OBJECT
   signals:
     void a_step_done();
   public:
+    void emit_a_step_done() {  emit a_step_done();  }
+    virtual QVector<AnswerItem> doWork(const Params& p) = 0;
+    virtual ~Calculus() {}
+};
+
+struct CalculusEiler : public Calculus
+{
     QVector<AnswerItem> doWork(const Params& p);
 };
 
-class CalculusTrapeze : public QObject
+struct CalculusTrapeze : public Calculus
 {
-    Q_OBJECT
-  signals:
-    void a_step_done();
-  public:
     QVector<AnswerItem> doWork(const Params& p);
 };
 

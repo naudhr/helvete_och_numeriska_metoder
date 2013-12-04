@@ -173,7 +173,7 @@ struct NewtonDoesNotConverge {};
 
 // classical Newton solver
 // templated to provide the same framework for either eiler or trapeze methods
-template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const Equiv& e)
+template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const Equiv& e, size_t& n_steps)
 {
     // incrementally solving "I*delta_x + W = 0 (where I = W')" until both W and delta_x > eps
     X x_i_1 = x_k_1;
@@ -189,6 +189,7 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
             // rather dirty hack
             x_i_1(3) = qMin(x_i_1(3), 2*p.reg.Eqenom);
             x_i_1(3) = qMax(x_i_1(3), 0.);
+            n_steps = p.max_iterations - max_iterations + 1;
             return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
         }
@@ -197,6 +198,15 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
 }
 
 //-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+
+static AnswerItem make_answer_item(double t, const X& x, size_t n_steps)
+{
+    AnswerItem i;
+    i.time=t, i.delta=x(1), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11), i.n_steps = n_steps;
+    return i;
+}
+
 //-----------------------------------------------------------------------
 
 Equiv recalculate_equiv_params(double t, const X& x, const Params& p, Equiv e)
@@ -213,9 +223,40 @@ Equiv recalculate_equiv_params(double t, const X& x, const Params& p, Equiv e)
 }
 
 //-----------------------------------------------------------------------
+
+template<class Method> QVector<AnswerItem> do_work(const Params& p, Calculus* caller)
+{
+    QVector<AnswerItem> a;
+    a.reserve((p.Tstop-p.Tstart)/p.dt+1);
+
+    X x = make_x0(p); // initial vector according to the blueprint
+    a.push_back( make_answer_item(p.Tstart,x,0) ); // accepting it as a valid datum
+
+    Equiv e = { 0., 0., 0., 0., 0., 0. }; // to ensure thar Upphi starts with 0.
+    for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
+    {
+        size_t n_steps;
+        // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
+        e = recalculate_equiv_params(t,x,p,e);
+        // as our newton implementation is able to return a new step value, omit some arithmetics
+        x = solve_newton<Method>(x, p, e, n_steps);
+        a.push_back( make_answer_item(t,x,n_steps) );
+        caller->emit_a_step_done();
+    }
+    catch(NewtonDoesNotConverge)
+    {
+        qDebug() << Method::name() << ' ' << a.size() << "points: NewtonDoesNotConverge";
+        break;
+    }
+    return a;
+}
+
+//-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
 struct Eiler {
+
+    static const char* name() {  return "Eiler";  }
 
     static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Consts& r, const Equiv& e)
     {
@@ -325,38 +366,9 @@ struct Eiler {
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
-static AnswerItem make_answer_item(double t, const X& x)
-{
-    AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
-    i.time=t, i.delta=x(1), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
-    //i.time=t, i.delta=x(7), i.omega=x(4), i.Eqe=x(10), i.Eqprime=x(6), i.V=x(7), i.U=x(8);
-    return i;
-}
-
 QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
 {
-    QVector<AnswerItem> a;
-    a.reserve((p.Tstop-p.Tstart)/p.dt+1);
-
-    X x = make_x0(p); // initial vector according to the blueprint
-    a.push_back( make_answer_item(p.Tstart,x) ); // accepting it as a valid datum
-
-    Equiv e = { 0., 0., 0., 0., 0., 0. }; // to ensure thar Upphi starts with 0.
-    for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
-    {
-        // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
-        // as our newton implementation is able to return a new step value, omit some arithmetics
-        x = solve_newton<Eiler>(x, p, e = recalculate_equiv_params(t,x,p,e));
-        a.push_back( make_answer_item(t,x) );
-        emit a_step_done();
-    }
-    catch(NewtonDoesNotConverge)
-    {
-        qCritical() << "Eiler" << a.size() << "points: aaaaand NewtonDoesNotConverge";
-        break;
-        //throw;
-    }
-    return a;
+    return do_work<Eiler>(p, this);
 }
 
 //-----------------------------------------------------------------------
@@ -364,6 +376,8 @@ QVector<AnswerItem> CalculusEiler::doWork(const Params& p)
 //-----------------------------------------------------------------------
 
 struct Trapeze {
+
+    static const char* name() {  return "Trapeze";  }
 
     static X calculate_W(const X& x_k_1, const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
     {
@@ -490,25 +504,5 @@ struct Trapeze {
 // does real work and emits signal on every time step to update a progress bar
 QVector<AnswerItem> CalculusTrapeze::doWork(const Params& p)
 {
-    QVector<AnswerItem> a;
-    a.reserve((p.Tstop-p.Tstart)/p.dt+1);
-
-    X x = make_x0(p);
-    a.push_back( make_answer_item(p.Tstart,x) );
-
-    Equiv e = { 0., 0., 0., 0., 0., 0. };
-    for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
-    {
-        x = solve_newton<Trapeze>(x, p, e = recalculate_equiv_params(t,x,p,e));
-        a.push_back( make_answer_item(t,x) );
-        emit a_step_done();
-    }
-    catch(NewtonDoesNotConverge)
-    {
-        qDebug() << "Trapeze" << a.size() << "points: NewtonDoesNotConverge";
-        break;
-        //throw;
-    }
-    return a;
+    return do_work<Trapeze>(p, this);
 }
-

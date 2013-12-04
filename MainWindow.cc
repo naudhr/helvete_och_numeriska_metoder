@@ -256,6 +256,7 @@ void CalculusWidget::start(const Params::Consts& reg)
             x2[i].Ue = ans[i].U;
             x2[i].De = ans[i].delta;
             x2[i].Ee = ans[i].Eqe;
+            x2[i].ne = ans[i].n_steps;
         }
         plot_answer_eiler(ans);
     }
@@ -275,6 +276,7 @@ void CalculusWidget::start(const Params::Consts& reg)
             x2[i].Ut = ans[i].U;
             x2[i].Dt = ans[i].delta;
             x2[i].Et = ans[i].Eqe;
+            x2[i].nt = ans[i].n_steps;
         }
         plot_answer_trapeze(ans);
     }
@@ -467,10 +469,12 @@ Params::Consts SystemParamsWidget::collect_params()
 ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
 {
     table = new QTableWidget(this);
-    table->setColumnCount(7);
+    table->setColumnCount(9);
     QStringList vh;
-    vh << "Time" << (QChar(0x03b4)+QLatin1String(" Eiler")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler")) << "Eqe Eiler"
-                 << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze")) << "Eqe Trapeze";
+    vh << "Time" << (QChar(0x03b4)+QLatin1String(" Eiler")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler"))
+                 << "Eqe Eiler" << "Nsteps Eiler"
+                 << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze"))
+                 << "Eqe Trapeze" << "Nsteps Trapeze";
     table->setHorizontalHeaderLabels(vh);
     table->verticalHeader()->setVisible(false);
     table->setSortingEnabled(false);
@@ -493,9 +497,11 @@ void ToExcel::populate(double dt, const QVector<x2_U_D_E>& data)
         table->setItem(row, 1, new QTableWidgetItem(data[row].e ? QString::number(data[row].Ue) : ""));
         table->setItem(row, 2, new QTableWidgetItem(data[row].e ? QString::number(data[row].De) : ""));
         table->setItem(row, 3, new QTableWidgetItem(data[row].e ? QString::number(data[row].Ee) : ""));
-        table->setItem(row, 4, new QTableWidgetItem(data[row].t ? QString::number(data[row].Ut) : ""));
-        table->setItem(row, 5, new QTableWidgetItem(data[row].t ? QString::number(data[row].Dt) : ""));
-        table->setItem(row, 6, new QTableWidgetItem(data[row].t ? QString::number(data[row].Et) : ""));
+        table->setItem(row, 4, new QTableWidgetItem(data[row].e ? QString::number(data[row].ne) : ""));
+        table->setItem(row, 5, new QTableWidgetItem(data[row].t ? QString::number(data[row].Ut) : ""));
+        table->setItem(row, 6, new QTableWidgetItem(data[row].t ? QString::number(data[row].Dt) : ""));
+        table->setItem(row, 7, new QTableWidgetItem(data[row].t ? QString::number(data[row].Et) : ""));
+        table->setItem(row, 8, new QTableWidgetItem(data[row].t ? QString::number(data[row].nt) : ""));
     }
 }
 
@@ -509,23 +515,15 @@ void ToExcel::export_to_excel()
     QTextStream out(&file);
     const char delimiter = ';';
 
-    out << table->horizontalHeaderItem(0)->text() << delimiter
-        << table->horizontalHeaderItem(1)->text() << delimiter
-        << table->horizontalHeaderItem(2)->text() << delimiter
-        << table->horizontalHeaderItem(3)->text() << delimiter
-        << table->horizontalHeaderItem(4)->text() << delimiter
-        << table->horizontalHeaderItem(5)->text() << delimiter
-        << table->horizontalHeaderItem(6)->text() << '\n';
+    for(int i=0; i<table->columnCount(); i++)
+        out << table->horizontalHeaderItem(i)->text() << delimiter;
+    out << '\n';
 
     for(int r=0; r<table->rowCount(); r++)
-        out << table->item(r,0)->text().replace('.',',') << delimiter
-            << table->item(r,1)->text().replace('.',',') << delimiter
-            << table->item(r,2)->text().replace('.',',') << delimiter
-            << table->item(r,3)->text().replace('.',',') << delimiter
-            << table->item(r,4)->text().replace('.',',') << delimiter
-            << table->item(r,5)->text().replace('.',',') << delimiter
-            << table->item(r,6)->text() << '\n';
-
-    
+    {
+        for(int i=0; i<table->columnCount(); i++)
+            out << table->item(r,i)->text().replace('.',',') << delimiter;
+        out << '\n';
+    }
 }
 

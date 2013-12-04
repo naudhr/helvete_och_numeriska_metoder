@@ -22,6 +22,7 @@ struct Params
 struct AnswerItem
 {
     double time, delta, omega, Eqe, Eqprime, V, U;
+    size_t n_steps;
 };
 
 struct x2_U_D_E
@@ -29,6 +30,7 @@ struct x2_U_D_E
     bool e, t;
     double Ue, De, Ee;
     double Ut, Dt, Et;
+    size_t ne, nt;
     x2_U_D_E() : e(false), t(false) {}
 };
 
