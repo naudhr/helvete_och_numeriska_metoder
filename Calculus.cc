@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <cassert>
 #include <cmath>
+#include <QMessageBox>
 
 // the Trapeze and Eiler matrix and vector statements are fully and trully
 // Chich-Pych's intellectual property and thus are subjects of some kinds
@@ -169,7 +170,10 @@ struct Equiv
     double Pd, Upphi;
 };
 
-struct NewtonDoesNotConverge {};
+struct NewtonDoesNotConverge {
+    NewtonDoesNotConverge(size_t n) : n_steps(n) {}
+    const size_t n_steps;
+};
 
 // classical Newton solver
 // templated to provide the same framework for either eiler or trapeze methods
@@ -177,24 +181,25 @@ template <typename Method> X solve_newton(const X& x_k_1, const Params& p, const
 {
     // incrementally solving "I*delta_x + W = 0 (where I = W')" until both W and delta_x > eps
     X x_i_1 = x_k_1;
+    n_steps = 0;
     for(size_t max_iterations=p.max_iterations; max_iterations; max_iterations--)
     {
         const X W = Method::calculate_W(x_k_1, x_i_1, p.dt, p.reg, e);
-        const IMatrix I = Method::calculate_I(x_i_1, p.dt, p.reg, e);
+        const IMatrix I = Method::calculate_I(x_i_1, p.dt, p, e);
         // converts our NLAS into a LAS and solves it
         const X delta_x_i = solve_gauss(I, W);
         x_i_1 += delta_x_i;
+        n_steps++;
         if(W.less_then_eps(p.eps) and delta_x_i.less_then_eps(p.eps))
         {
             // rather dirty hack
             x_i_1(3) = qMin(x_i_1(3), 2*p.reg.Eqenom);
             x_i_1(3) = qMax(x_i_1(3), 0.);
-            n_steps = p.max_iterations - max_iterations + 1;
             return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
         }
     }
-    throw NewtonDoesNotConverge();
+    throw NewtonDoesNotConverge(n_steps);
 }
 
 //-----------------------------------------------------------------------
@@ -243,9 +248,12 @@ template<class Method> QVector<AnswerItem> do_work(const Params& p, Calculus* ca
         a.push_back( make_answer_item(t,x,n_steps) );
         caller->emit_a_step_done();
     }
-    catch(NewtonDoesNotConverge)
+    catch(const NewtonDoesNotConverge& exc)
     {
         qDebug() << Method::name() << ' ' << a.size() << "points: NewtonDoesNotConverge";
+        QMessageBox::warning(NULL,"NewtonDoesNotConverge", QString("%1 at %4t\n%2 steps => answer of size %3")
+                                                               .arg(Method::name()).arg(exc.n_steps)
+                                                               .arg(QString::number(a.size())).arg(t));
         break;
     }
     return a;
@@ -291,8 +299,9 @@ struct Eiler {
         W(11) = Eqprime*U/r.Xdprime*cos(d_v) - U*U*(cos(d_v)*cos(d_v)/r.Xdprime + sin(d_v)*sin(d_v)/r.Xd) - U*U*e.Y11*cos(e.A11) + U*r.Uc*e.Y12*cos(V-e.A12);
         return W;
     }
-    static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Consts& r, const Equiv& e)
+    static IMatrix calculate_I(const X& x_i_1, double dt, const Params& p, const Equiv& e)
     {
+        const Params::Consts& r = p.reg;
         IMatrix I;
         //I = boost::numeric::ublas::zero_matrix<double>(12,12);
 
@@ -416,8 +425,9 @@ struct Trapeze {
         W(11) = Eqprime*U/reg.Xdprime*cos(d_v) - U*U/reg.Xdprime*cos(d_v)*cos(d_v) - U*U/reg.Xd*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*reg.Uc*e.Y12*cos(V-e.A12);
         return W;
     }
-    static IMatrix calculate_I(const X& x_i_1, double dt, const Params::Consts& reg, const Equiv& e)
+    static IMatrix calculate_I(const X& x_i_1, double dt, const Params& p, const Equiv& e)
     {
+        const Params::Consts& reg = p.reg;
         IMatrix I;
         //I = boost::numeric::ublas::zero_matrix<double>(12,12);
 
@@ -430,7 +440,7 @@ struct Trapeze {
         const double d_v = delta-V;
 
         I(0,0) = -dt/2.;
-        I(0,1) = 1.;
+        I(0,1) = 1.; // p.start.Eqe0;
 
         I(1,0) = dt/reg.Ty/2.*e.Pd + 1.;
         I(1,1) = dt/reg.Ty/2.*reg.omega_nom*(Eqprime*U/reg.Xdprime*cos(d_v) - U*U*Xdp*cos(2*d_v));
