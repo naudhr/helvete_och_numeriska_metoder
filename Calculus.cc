@@ -25,6 +25,8 @@ template <size_t R, size_t C> class Matrix_N
         return data[r][c];
     }
     double& operator()(size_t r, size_t c) {
+        assert(r < R);
+        assert(c < C);
         assert(r < R and c < C);
         return data[r][c];
     }
@@ -109,21 +111,20 @@ template<size_t N> X_N<N> solve_gauss(const IMatrix_N<N>& I, const X_N<N>& W)
     // Well, actually, we know a lot about the A guts and could use some
     // tricks to reduce computations. But here we're just showing how to
     // brutegauss LASes. A pretty straightforward gauss elimination
-    // algorithm is implemented, though the assumption has been made that
-    // the system rank is 12.
+    // algorithm is implemented.
 
     // Rolling down, converting the matrix into an upper-triangle one
-    for(size_t i=0; i<12; i++)
+    for(size_t i=0; i<N; i++)
     {
         A.ensure_non_zero_diagonal_elem(i);
         A.normalise_row(i);
-        for(size_t j=i+1; j<12; j++)
+        for(size_t j=i+1; j<N; j++)
             A.subst_row_mult(j,i);
     }
     // Rolling up, making the matrix diagonal
-    for(size_t k=0; k<12; k++)
+    for(size_t k=0; k<N; k++)
     {
-        const size_t i = 11-k;
+        const size_t i = N-1-k;
         for(size_t j=0; j<i; j++)
             A.subst_row_mult(j,i);
     }
@@ -660,8 +661,8 @@ CalculusSequensive::Impl::IMatrix CalculusSequensive::Impl::calculate_I(const X&
 
     const double delta = x_i_1(1);
     const double Eqprime = x_i_1(2);
-    const double V = x_i_1(10);
-    const double U = x_i_1(11);
+    const double V = x_i_1(3);
+    const double U = x_i_1(4);
     const double d_v = delta-V;
     const double s_d_v = sin(d_v);
     const double c_d_v = cos(d_v);
@@ -691,12 +692,12 @@ CalculusSequensive::Impl::IMatrix CalculusSequensive::Impl::calculate_I(const X&
 
     I(3,1) = Eqprime*U/r.Xdprime*c_d_v - U*U*Xdp*cos(2*d_v);
     I(3,2) = U/r.Xdprime*s_d_v;
-    I(3,3) = -I(10,1) - U*r.Uc*e.Y12*cos(V-e.A12);
+    I(3,3) = -I(3,1) - U*r.Uc*e.Y12*cos(V-e.A12);
     I(3,4) = Eqprime/r.Xdprime*s_d_v - 2.*U*Xdp*s_d_v*c_d_v - 2.*U*e.Y11*sin(e.A11) - r.Uc*e.Y12*sin(V-e.A12);
 
     I(4,1) = U*U*Xdp*2*s_d_v*c_d_v - Eqprime*U/r.Xdprime*s_d_v;
     I(4,2) = U/r.Xdprime*c_d_v;
-    I(4,3) = -I(11,1) - U*r.Uc*e.Y12*sin(V-e.A12);
+    I(4,3) = -I(4,1) - U*r.Uc*e.Y12*sin(V-e.A12);
     I(4,4) = Eqprime/r.Xdprime*c_d_v - 2*U*(c_d_v*c_d_v/r.Xdprime + s_d_v*s_d_v/r.Xd) - 2*U*e.Y11*cos(e.A11) + r.Uc*e.Y12*cos(V-e.A12);
     return I;
 }

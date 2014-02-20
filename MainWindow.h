@@ -84,7 +84,7 @@ class CalculusWidget : public QWidget
     void a_part_of_the_plot_done();
   signals:
     void enable_start_button(bool);
-    //void to_excel_populate(
+    void to_excel_populate(const AnswerItem& ans, int set_no);
   public:
     CalculusWidget(QWidget* );
     ~CalculusWidget();
@@ -111,7 +111,7 @@ class ToExcel : public QWidget
   private slots:
     void export_to_excel();
   public slots:
-    void populate(const AnswerItem& data);
+    void populate(const AnswerItem& data, int set_no);
     void clear();
 };
 

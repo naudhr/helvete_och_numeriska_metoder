@@ -66,7 +66,7 @@ CentralWidget::CentralWidget() : QWidget(NULL)
 
     connect(start_button, SIGNAL(clicked()), SLOT(start()));
     connect(calculus, SIGNAL(enable_start_button(bool)), start_button, SLOT(setEnabled(bool)));
-    connect(calculus, SIGNAL(to_excel_populate(AnswerItem)), to_excel, SLOT(populate(AnswerItem)));
+    connect(calculus, SIGNAL(to_excel_populate(AnswerItem,int)), to_excel, SLOT(populate(AnswerItem,int)));
 }
 
 void CentralWidget::start()
@@ -180,23 +180,23 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Eiler"),160,0,210, "delta E");
     add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler"),210,0,0, "omega E");
     add_plot_curve(plot, "Eqe Eiler",5,205,0, "eqe E");
-    add_plot_curve(plot, "Eqprime Eiler",210,120,0, "eqp E");
+    add_plot_curve(plot, "E'q Eiler",210,120,0, "eqp E");
     add_plot_curve(plot, "U Eiler",0,0,0, "u E");
-    add_plot_curve(plot, "V Eiler",0,100,100, "v E");
+    add_plot_curve(plot, QChar(0x03bd)+QLatin1String(" Eiler"),0,100,100, "v E");
 
     add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Trapeze"),210,50,255, "delta T");
     add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze"),255,45,45, "omega T");
     add_plot_curve(plot, "Eqe Trapeze",50,255,50, "eqe T");
-    add_plot_curve(plot, "Eqprime Trapeze",255,160,50, "eqp T");
+    add_plot_curve(plot, "E'q Trapeze",255,160,50, "eqp T");
     add_plot_curve(plot, "U Trapeze",60,60,60, "u T");
-    add_plot_curve(plot, "V Trapeze",0,180,180, "v T");
+    add_plot_curve(plot, QChar(0x03bd)+QLatin1String(" Trapeze"),0,180,180, "v T");
 
     add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Sequensive"),210,50,255, "delta S");
     add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Sequensive"),255,45,45, "omega S");
     add_plot_curve(plot, "Eqe Sequensive",50,255,50, "eqe S");
-    add_plot_curve(plot, "Eqprime Sequensive",255,160,50, "eqp S");
+    add_plot_curve(plot, "E'q Sequensive",255,160,50, "eqp S");
     add_plot_curve(plot, "U Sequensive",60,60,60, "u S");
-    add_plot_curve(plot, "V Sequensive",0,180,180, "v S");
+    add_plot_curve(plot, QChar(0x03bd)+QLatin1String(" Sequensive"),0,180,180, "v S");
 
     QVBoxLayout* l = new QVBoxLayout(this);
     l->addLayout(eqv);
@@ -351,24 +351,28 @@ void CalculusWidget::sequensive_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("S"), ans);
     progress_bar_sequensive->setValue(progress_bar_sequensive->value()+1);
+    emit to_excel_populate(ans,2);
 }
 
 void CalculusWidget::parallel_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("P"), ans);
     progress_bar_parallel->setValue(progress_bar_parallel->value()+1);
+    emit to_excel_populate(ans,3);
 }
 
 void CalculusWidget::trapeze_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("T"), ans);
     progress_bar_trapeze->setValue(progress_bar_trapeze->value()+1);
+    emit to_excel_populate(ans,1);
 }
 
 void CalculusWidget::eiler_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("E"), ans);
     progress_bar_eiler->setValue(progress_bar_eiler->value()+1);
+    emit to_excel_populate(ans,0);
 }
 
 void CalculusWidget::a_part_of_the_plot_done()
@@ -454,12 +458,16 @@ Params::Consts SystemParamsWidget::collect_params()
 ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
 {
     table = new QTableWidget(this);
-    table->setColumnCount(7);
+    table->setColumnCount(21/*25*/);
     QStringList vh;
     vh << "Time" << (QChar(0x03b4)+QLatin1String(" Eiler")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler")) << "Eqe Eiler"
-                 << (QChar(0x03b4)+QLatin1String("E'qe Eiler")) << (QString(0x03c9)+QLatin1String("V Eiler")) << "U Eiler"
+                 << (QChar(0x03bd)+QLatin1String(" Eiler")) << "U Eiler" /*<< "E'q Eiler"*/
                  << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze")) << "Eqe Trapeze"
-                 << (QChar(0x03b4)+QLatin1String("E'qe  Trapeze")) << (QString(0x03c9)+QLatin1String("V Trapeze")) << "U Trapeze";
+                 << (QChar(0x03bd)+QLatin1String(" Trapeze")) << "U Trapeze" /*<< "E'q  Trapeze"*/
+                 << (QChar(0x03b4)+QLatin1String(" Sequensive")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Sequensive")) << "Eqe Sequensive"
+                 << (QChar(0x03bd)+QLatin1String(" Sequensive")) << "U Sequensive" /*<< "E'q  Sequensive"*/
+                 << (QChar(0x03b4)+QLatin1String(" Parallel")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Parallel")) << "Eqe Parallel"
+                 << (QChar(0x03bd)+QLatin1String(" Parallel")) << "U Parallel" /*<< "E'q  Parallel"*/;
     table->setHorizontalHeaderLabels(vh);
     table->verticalHeader()->setVisible(false);
     table->setSortingEnabled(false);
@@ -473,18 +481,26 @@ ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
     l->addWidget(button);
 }
 
-void ToExcel::populate(const AnswerItem& data)
+void ToExcel::populate(const AnswerItem& data, int set_no)
 {
-    const int row = table->rowCount();
-    table->setRowCount(row + 1);
+    const int set_size = (table->columnCount()-1)/4;
+    const int set_off = set_size * set_no;
 
-    table->setItem(row, 0, new QTableWidgetItem(QString::number(data.time)));
-    table->setItem(row, 1, new QTableWidgetItem(QString::number(data.delta)));
-    table->setItem(row, 2, new QTableWidgetItem(QString::number(data.omega)));
-    table->setItem(row, 3, new QTableWidgetItem(QString::number(data.Eqe)));
-    table->setItem(row, 4, new QTableWidgetItem(""));//QString::number(data.Eqeprime)));
-    table->setItem(row, 5, new QTableWidgetItem(QString::number(data.V)));
-    table->setItem(row, 6, new QTableWidgetItem(QString::number(data.U)));
+    int row = 0;
+    for( ; row<table->rowCount(); row++)
+        if(table->item(row,1+set_off) == NULL/*->text().isEmpty()*/)
+            break;
+    if(row >= table->rowCount())
+    {
+        table->setRowCount(row + 1);
+        table->setItem(row, 0, new QTableWidgetItem(QString::number(data.time)));
+    }
+    table->setItem(row, set_off+1, new QTableWidgetItem(QString::number(data.delta)));
+    table->setItem(row, set_off+2, new QTableWidgetItem(QString::number(data.omega)));
+    table->setItem(row, set_off+3, new QTableWidgetItem(QString::number(data.Eqe)));
+    table->setItem(row, set_off+4, new QTableWidgetItem(QString::number(data.V)));
+    table->setItem(row, set_off+5, new QTableWidgetItem(QString::number(data.U)));
+    //table->setItem(row, set_off+6, new QTableWidgetItem(""));//QString::number(data.Eqeprime)));
 }
 
 void ToExcel::clear()
