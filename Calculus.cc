@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <cassert>
 #include <cmath>
+#include <QMessageBox>
 
 // the Trapeze and Eiler matrix and vector statements are fully and trully
 // Lyuba Chich-Pych's intellectual property and thus are subjects of some
@@ -137,7 +138,10 @@ struct Equiv
     double Pd, Upphi;
 };
 
-struct NewtonDoesNotConverge {};
+struct NewtonDoesNotConverge {
+    NewtonDoesNotConverge(size_t n) : n_steps(n) {}
+    const size_t n_steps;
+};
 
 // classical Newton solver
 // templated to provide the same framework for either eiler or trapeze methods
@@ -145,7 +149,8 @@ template <class Method> typename Method::X solve_newton_impl(const Method* pimpl
 {
     // incrementally solving "I*delta_x + W = 0 (where I = W')" until both W and delta_x > eps
     typename Method::X x_i_1 = pimpl->x;
-    for(size_t max_iterations=pimpl->p.max_iterations; max_iterations; max_iterations--)
+    size_t n_steps = 0;
+    for(size_t max_iterations=pimpl->p.max_iterations; max_iterations; max_iterations--, n_steps++)
     {
         const typename Method::X W = pimpl->calculate_W(x_i_1);
         const typename Method::IMatrix I = pimpl->calculate_I(x_i_1);
@@ -159,7 +164,7 @@ template <class Method> typename Method::X solve_newton_impl(const Method* pimpl
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
         }
     }
-    throw NewtonDoesNotConverge();
+    throw NewtonDoesNotConverge(n_steps);
 }
 
 //-----------------------------------------------------------------------
@@ -200,8 +205,13 @@ void Calculus::run()
         solve_newton(t);
         emit_x(t);
     }
-    catch(NewtonDoesNotConverge)
+    catch(const NewtonDoesNotConverge& exc)
     {
+        qDebug() << name() << ' ' << (p.Tstop - p.Tstart) / p.dt << "points: NewtonDoesNotConverge";
+        QMessageBox::warning(NULL,"NewtonDoesNotConverge", QString("%1 at %4t\n%2 steps => answer of size %3")
+                                                               .arg(name()).arg(exc.n_steps)
+                                                               .arg(QString::number(static_cast<size_t>((p.Tstop - p.Tstart) / p.dt)))
+                                                               .arg(t));
         qCritical() << (t-p.Tstart)/p.dt << "points: aaaaand NewtonDoesNotConverge";
         return;
     }

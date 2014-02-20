@@ -15,6 +15,7 @@ class Calculus : public QThread
     virtual void run();
     virtual void emit_x(double t) = 0;
     virtual void solve_newton(double t) = 0;
+    virtual const char* name() const {  return "";  }
   signals:
     void a_step_done(AnswerItem);
   public:
@@ -29,6 +30,7 @@ class CalculusEiler : public Calculus
     Impl* pimpl;
     virtual void emit_x(double t);
     virtual void solve_newton(double t);
+    virtual const char* name() const {  return "Eiler";  }
  public:
     CalculusEiler(const Params& _p);
     virtual ~CalculusEiler() {}
@@ -41,6 +43,7 @@ class CalculusTrapeze : public Calculus
     Impl* pimpl;
     virtual void emit_x(double t);
     virtual void solve_newton(double t);
+    virtual const char* name() const {  return "Trapeze";  }
  public:
     CalculusTrapeze(const Params& _p);
     virtual ~CalculusTrapeze() {}
@@ -53,6 +56,7 @@ class CalculusSequensive : public Calculus
     Impl* pimpl;
     virtual void emit_x(double t);
     virtual void solve_newton(double t);
+    virtual const char* name() const {  return "Sequensive";  }
  public:
     CalculusSequensive(const Params& _p);
     virtual ~CalculusSequensive() {}
@@ -65,6 +69,7 @@ class CalculusParallel : public Calculus
     Impl* pimpl;
     virtual void emit_x(double t);
     virtual void solve_newton(double t);
+    virtual const char* name() const {  return "Parallel";  }
  public:
     CalculusParallel(const Params& _p);
     virtual ~CalculusParallel() {}
