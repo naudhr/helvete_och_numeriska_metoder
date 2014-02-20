@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "Calculus.h"
 #include "params.h"
+#include "NoQwt.h"
 
 #include <QApplication>
 #include <QHBoxLayout>
@@ -14,21 +15,22 @@
 #include <QDoubleValidator>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QShortcut>
 #include <QHeaderView>
 #include <QFileDialog>
 #include <QFile>
-#include <qwt_plot.h>
-#include <qwt_plot_curve.h>
-#include <qwt_legend.h>
-#include <qwt_plot_zoomer.h>
-#include <qwt_plot_grid.h>
 
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {
   QApplication qapp(argc,argv);
 
+  qRegisterMetaType<AnswerItem>("AnswerItem");
+
   MainWindow w;
+  QObject::connect(&w,SIGNAL(quit()),&qapp,SLOT(quit()));
+
   w.showMaximized();
   return qapp.exec();
 }
@@ -39,6 +41,7 @@ int main(int argc, char *argv[])
 MainWindow::MainWindow() : QMainWindow(NULL)
 {
     setCentralWidget(new CentralWidget);
+    /*QShortcut* q =*/ new QShortcut(Qt::CTRL + Qt::Key_Q, this, SIGNAL(quit()));
     //setFixedSize(1600,900);
 }
 
@@ -63,7 +66,7 @@ CentralWidget::CentralWidget() : QWidget(NULL)
 
     connect(start_button, SIGNAL(clicked()), SLOT(start()));
     connect(calculus, SIGNAL(enable_start_button(bool)), start_button, SLOT(setEnabled(bool)));
-    connect(calculus, SIGNAL(to_excel_populate(double, QVector<x2_U_D_E>)), to_excel, SLOT(populate(double, QVector<x2_U_D_E>)));
+    connect(calculus, SIGNAL(to_excel_populate(AnswerItem)), to_excel, SLOT(populate(AnswerItem)));
 }
 
 void CentralWidget::start()
@@ -86,13 +89,11 @@ static QLineEdit* add_double_input(QBoxLayout* layout, const QString& label, con
     return edit;
 }
 
-static QwtPlotCurve* add_plot_curve(const QString& label, int r, int g, int b)
+static void add_plot_curve(NoQwtPlot* plot, const QString& label, int r, int g, int b, const QString& tag)
 {
-    QwtPlotCurve* curve = new QwtPlotCurve(label);
-    curve->setRenderHint(QwtPlotItem::RenderAntialiased);
-    curve->setPen(QPen(QColor(r,g,b)));
-    curve->setVisible(false);
-    return curve;
+    NoQwtPlotCurve* curve = new NoQwtPlotCurve(plot, label, QPen(QColor(r,g,b)), QBrush(Qt::black), tag);
+    curve->setVisible(true);
+    //return curve;
 }
 
 CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
@@ -128,105 +129,107 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     max_iterations = add_double_input(cpt, "max_iterations:", "50", validator);
     max_iterations->setValidator(new QIntValidator(5,5000,this));
 
+    QHBoxLayout* prb = new QHBoxLayout;
     enable_eiler = new QCheckBox(this);
     enable_eiler->setChecked(false);
-    enable_trapeze = new QCheckBox(this);
-    enable_trapeze->setChecked(false);
     progress_bar_eiler = new QProgressBar(this);
     progress_bar_eiler->setFormat("Eiler");
     progress_bar_eiler->setMinimum(0);
     progress_bar_eiler->setMaximum(1);
     progress_bar_eiler->setValue(0);
     progress_bar_eiler->setEnabled(false);
+    prb->addWidget(enable_eiler);
+    prb->addWidget(progress_bar_eiler);
+    prb->addSpacing(30);
+    enable_trapeze = new QCheckBox(this);
+    enable_trapeze->setChecked(false);
     progress_bar_trapeze = new QProgressBar(this);
     progress_bar_trapeze->setFormat("Trapeze");
     progress_bar_trapeze->setMinimum(0);
     progress_bar_trapeze->setMaximum(1);
     progress_bar_trapeze->setValue(0);
     progress_bar_trapeze->setEnabled(false);
-    QHBoxLayout* prb = new QHBoxLayout;
-    prb->addWidget(enable_eiler);
-    prb->addWidget(progress_bar_eiler);
-    prb->addSpacing(30);
     prb->addWidget(enable_trapeze);
     prb->addWidget(progress_bar_trapeze);
+    prb->addSpacing(30);
+    enable_sequensive = new QCheckBox(this);
+    enable_sequensive->setChecked(false);
+    progress_bar_sequensive = new QProgressBar(this);
+    progress_bar_sequensive->setFormat("Sequensive");
+    progress_bar_sequensive->setMinimum(0);
+    progress_bar_sequensive->setMaximum(1);
+    progress_bar_sequensive->setValue(0);
+    progress_bar_sequensive->setEnabled(false);
+    prb->addWidget(enable_sequensive);
+    prb->addWidget(progress_bar_sequensive);
+    prb->addSpacing(30);
+    enable_parallel = new QCheckBox(this);
+    enable_parallel->setChecked(false);
+    progress_bar_parallel = new QProgressBar(this);
+    progress_bar_parallel->setFormat("Parallel");
+    progress_bar_parallel->setMinimum(0);
+    progress_bar_parallel->setMaximum(1);
+    progress_bar_parallel->setValue(0);
+    progress_bar_parallel->setEnabled(false);
+    prb->addWidget(enable_parallel);
+    prb->addWidget(progress_bar_parallel);
 
-    plot = new QwtPlot(this);
+    view = new NoQwtGraphicsView(this);
+    plot = new NoQwtPlot(view->scene(), "", "", "");
 
-    curve_eiler_Delta = add_plot_curve(QChar(0x03b4)+QLatin1String(" Eiler"),160,0,210);
-    curve_eiler_Omega = add_plot_curve(QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler"),210,0,0);
-    curve_eiler_Eqe = add_plot_curve("Eqe Eiler",5,205,0);
-    curve_eiler_Eqprime = add_plot_curve("Eqprime Eiler",210,120,0);
-    curve_eiler_U = add_plot_curve("U Eiler",0,0,0);
+    add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Eiler"),160,0,210, "delta E");
+    add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler"),210,0,0, "omega E");
+    add_plot_curve(plot, "Eqe Eiler",5,205,0, "eqe E");
+    add_plot_curve(plot, "Eqprime Eiler",210,120,0, "eqp E");
+    add_plot_curve(plot, "U Eiler",0,0,0, "u E");
+    add_plot_curve(plot, "V Eiler",0,100,100, "v E");
 
-    curve_trapeze_Delta = add_plot_curve(QChar(0x03b4)+QLatin1String(" Trapeze"),210,50,255);
-    curve_trapeze_Omega = add_plot_curve(QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze"),255,45,45);
-    curve_trapeze_Eqe = add_plot_curve("Eqe Trapeze",50,255,50);
-    curve_trapeze_Eqprime = add_plot_curve("Eqprime Trapeze",255,160,50);
-    curve_trapeze_U = add_plot_curve("U Trapeze",60,60,60);
+    add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Trapeze"),210,50,255, "delta T");
+    add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze"),255,45,45, "omega T");
+    add_plot_curve(plot, "Eqe Trapeze",50,255,50, "eqe T");
+    add_plot_curve(plot, "Eqprime Trapeze",255,160,50, "eqp T");
+    add_plot_curve(plot, "U Trapeze",60,60,60, "u T");
+    add_plot_curve(plot, "V Trapeze",0,180,180, "v T");
 
-    QwtLegend* legend = new QwtLegend;
-    legend->setItemMode(QwtLegend::ReadOnlyItem);
-    plot->insertLegend(legend,QwtPlot::TopLegend);
-
-    zoom = new QwtPlotZoomer(plot->canvas());
-    zoom->setRubberBandPen(QPen(Qt::white));
-
-    QwtPlotGrid* grid = new QwtPlotGrid;
-    grid->enableXMin(true);
-    grid->setMajPen(QPen(Qt::black,0,Qt::DotLine));
-    grid->setMinPen(QPen(Qt::gray,0,Qt::DotLine));
-    grid->attach(plot);
+    add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Sequensive"),210,50,255, "delta S");
+    add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Sequensive"),255,45,45, "omega S");
+    add_plot_curve(plot, "Eqe Sequensive",50,255,50, "eqe S");
+    add_plot_curve(plot, "Eqprime Sequensive",255,160,50, "eqp S");
+    add_plot_curve(plot, "U Sequensive",60,60,60, "u S");
+    add_plot_curve(plot, "V Sequensive",0,180,180, "v S");
 
     QVBoxLayout* l = new QVBoxLayout(this);
     l->addLayout(eqv);
     l->addLayout(srt);
     l->addLayout(cpt);
     l->addLayout(prb);
-    l->addWidget(plot,2);
+    l->addWidget(view,2);
 
     plot->setVisible(true);
     progress_bar_eiler->setVisible(true);
     progress_bar_trapeze->setVisible(true);
 
-    connect(enable_eiler, SIGNAL(clicked()), SLOT(wanna_eiler()));
-    connect(enable_trapeze, SIGNAL(clicked()), SLOT(wanna_trapeze()));
+    connect(enable_eiler, SIGNAL(clicked()), SLOT(some_calc_enabled()));
+    connect(enable_trapeze, SIGNAL(clicked()), SLOT(some_calc_enabled()));
+    connect(enable_sequensive, SIGNAL(clicked()), SLOT(some_calc_enabled()));
+    connect(enable_parallel, SIGNAL(clicked()), SLOT(some_calc_enabled()));
+    jobs = 0;
 }
 
 CalculusWidget::~CalculusWidget()
 {
-    if(not curve_eiler_U->plot() )  delete curve_eiler_U;
-    if(not curve_eiler_Delta->plot() )  delete curve_eiler_Delta;
-    if(not curve_eiler_Omega->plot() )  delete curve_eiler_Omega;
-    if(not curve_eiler_Eqe->plot() )  delete curve_eiler_Eqe;
-    if(not curve_eiler_Eqprime->plot() )  delete curve_eiler_Eqprime;
-    if(not curve_trapeze_Delta->plot() )  delete curve_trapeze_Delta;
-    if(not curve_trapeze_Omega->plot() )  delete curve_trapeze_Omega;
-    if(not curve_trapeze_Eqe->plot() )  delete curve_trapeze_Eqe;
-    if(not curve_trapeze_Eqprime->plot() )  delete curve_trapeze_Eqprime;
-    if(not curve_trapeze_U->plot() )  delete curve_trapeze_U;
 }
 
-void CalculusWidget::wanna_eiler()
+void CalculusWidget::some_calc_enabled()
 {
     progress_bar_eiler->setEnabled( enable_eiler->isChecked() );
-    curve_eiler_U->attach( enable_eiler->isChecked() ? plot : NULL );
-    curve_eiler_Delta->attach( enable_eiler->isChecked() ? plot : NULL );
-    curve_eiler_Omega->attach( enable_eiler->isChecked() ? plot : NULL );
-    curve_eiler_Eqe->attach( enable_eiler->isChecked() ? plot : NULL );
-    curve_eiler_Eqprime->attach( enable_eiler->isChecked() ? plot : NULL );
-    emit enable_start_button( enable_eiler->isChecked() or enable_trapeze->isChecked() );
-}
-
-void CalculusWidget::wanna_trapeze()
-{
     progress_bar_trapeze->setEnabled( enable_trapeze->isChecked() );
-    curve_trapeze_Delta->attach( enable_trapeze->isChecked() ? plot : NULL );
-    curve_trapeze_Omega->attach( enable_trapeze->isChecked() ? plot : NULL );
-    curve_trapeze_Eqe->attach( enable_trapeze->isChecked() ? plot : NULL );
-    curve_trapeze_Eqprime->attach( enable_trapeze->isChecked() ? plot : NULL );
-    curve_trapeze_U->attach( enable_trapeze->isChecked() ? plot : NULL );
-    emit enable_start_button( enable_eiler->isChecked() or enable_trapeze->isChecked() );
+    progress_bar_sequensive->setEnabled( enable_sequensive->isChecked() );
+    progress_bar_parallel->setEnabled( enable_parallel->isChecked() );
+    emit enable_start_button( enable_eiler->isChecked() or
+                              enable_trapeze->isChecked() or
+                              enable_sequensive->isChecked() or
+                              enable_parallel->isChecked() );
 }
 
 void CalculusWidget::start(const Params::Consts& reg)
@@ -237,27 +240,18 @@ void CalculusWidget::start(const Params::Consts& reg)
     p.reg = reg;
     const int n = (p.Tstop - p.Tstart)/p.dt;
 
-    QVector<x2_U_D_E> x2(n+1);
-
-    plot->setAxisScale(QwtPlot::xBottom,p.Tstart-p.dt,p.Tstop+p.dt);
-
     if( enable_eiler->isChecked() )
     {
         progress_bar_eiler->setMaximum(n);
         progress_bar_eiler->setValue(0);
         progress_bar_eiler->setFormat("Eiler: %v");
 
-        CalculusEiler e;
-        connect(&e, SIGNAL(a_step_done()), SLOT(increment_eiler()));
-        const QVector<AnswerItem> ans = e.doWork(p);
-        for(int i=0; i<=n and i<ans.size(); i++)
-        {
-            x2[i].e = true;
-            x2[i].Ue = ans[i].U;
-            x2[i].De = ans[i].delta;
-            x2[i].Ee = ans[i].Eqe;
-        }
-        plot_answer_eiler(ans);
+        QThread* c = new CalculusEiler(p);
+        connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(eiler_step(AnswerItem)), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
+        c->start();
+        jobs ++;
     }
 
     if( enable_trapeze->isChecked() )
@@ -266,29 +260,47 @@ void CalculusWidget::start(const Params::Consts& reg)
         progress_bar_trapeze->setValue(0);
         progress_bar_trapeze->setFormat("Trapeze: %v");
 
-        CalculusTrapeze t;
-        connect(&t, SIGNAL(a_step_done()), SLOT(increment_trapeze()));
-        const QVector<AnswerItem> ans = t.doWork(p);
-        for(int i=0; i<=n and i<ans.size(); i++)
-        {
-            x2[i].t = true;
-            x2[i].Ut = ans[i].U;
-            x2[i].Dt = ans[i].delta;
-            x2[i].Et = ans[i].Eqe;
-        }
-        plot_answer_trapeze(ans);
+        QThread* c = new CalculusTrapeze(p);
+        connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(trapeze_step(AnswerItem)), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
+        c->start();
+        jobs ++;
     }
 
-    emit(to_excel_populate(p.dt, x2));
+    if( enable_sequensive->isChecked() )
+    {
+        progress_bar_sequensive->setMaximum(n);
+        progress_bar_sequensive->setValue(0);
+        progress_bar_sequensive->setFormat("Sequensive: %v");
 
-    plot->setAxisAutoScale(QwtPlot::xBottom);
-    plot->setAxisAutoScale(QwtPlot::yLeft);
+        QThread* c = new CalculusSequensive(p);
+        connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(sequensive_step(AnswerItem)), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
+        c->start();
+        jobs ++;
+    }
+
+    if( enable_parallel->isChecked() )
+    {
+        progress_bar_parallel->setMaximum(n);
+        progress_bar_parallel->setValue(0);
+        progress_bar_parallel->setFormat("Parallel: %v");
+
+        QThread* c = new CalculusParallel(p);
+        connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(parallel_step(AnswerItem)), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
+        c->start();
+        jobs ++;
+    }
+
+    plot->reset();
     plot->setVisible(true);
-    plot->replot();
-    zoom->setZoomBase();
 
-    enable_everything(true);
-    emit enable_start_button(true);
+    enable_everything(jobs == 0);
+    emit enable_start_button(jobs == 0);
 }
 
 void CalculusWidget::enable_everything(bool e)
@@ -325,74 +337,49 @@ Params CalculusWidget::collect_params()
     return p;
 }
 
-void CalculusWidget::increment_eiler()
+static void plot_answer_step(NoQwtPlot* plot, const QLatin1String& suffix, const AnswerItem& a)
 {
-    progress_bar_eiler->setValue(progress_bar_eiler->value()+1);
+    plot->curve(QLatin1String("delta ")+suffix)->addData(a.time, a.delta);
+    plot->curve(QLatin1String("omega ")+suffix)->addData(a.time, a.omega);
+    plot->curve(QLatin1String("eqp ")+suffix)->addData(a.time, a.Eqprime);
+    plot->curve(QLatin1String("eqe ")+suffix)->addData(a.time, a.Eqe);
+    plot->curve(QLatin1String("u ")+suffix)->addData(a.time, a.U);
+    plot->curve(QLatin1String("v ")+suffix)->addData(a.time, a.V);
 }
 
-void CalculusWidget::increment_trapeze()
+void CalculusWidget::sequensive_step(const AnswerItem& ans)
 {
+    plot_answer_step(plot, QLatin1String("S"), ans);
+    progress_bar_sequensive->setValue(progress_bar_sequensive->value()+1);
+}
+
+void CalculusWidget::parallel_step(const AnswerItem& ans)
+{
+    plot_answer_step(plot, QLatin1String("P"), ans);
+    progress_bar_parallel->setValue(progress_bar_parallel->value()+1);
+}
+
+void CalculusWidget::trapeze_step(const AnswerItem& ans)
+{
+    plot_answer_step(plot, QLatin1String("T"), ans);
     progress_bar_trapeze->setValue(progress_bar_trapeze->value()+1);
 }
 
-void CalculusWidget::plot_answer_eiler(const QVector<AnswerItem> ans)
+void CalculusWidget::eiler_step(const AnswerItem& ans)
 {
-    qDebug()<<__FUNCTION__<<ans.size();
-
-    QVector<QPointF> data_delta(ans.size());
-    QVector<QPointF> data_omega(ans.size());
-    QVector<QPointF> data_eqe(ans.size());
-    QVector<QPointF> data_eqp(ans.size());
-    QVector<QPointF> data_u(ans.size());
-    for(int i=0; i<ans.size(); i++)
-    {
-        const AnswerItem& a = ans.at(i);
-        data_delta[i] = QPointF(a.time, a.delta);
-        data_omega[i] = QPointF(a.time, a.omega);
-        data_eqp[i] = QPointF(a.time, a.Eqprime);
-        data_eqe[i] = QPointF(a.time, a.Eqe);
-        data_u[i] = QPointF(a.time, a.U);
-    }
-    curve_eiler_U->setSamples(data_u);
-    curve_eiler_Delta->setSamples(data_delta);
-    curve_eiler_Omega->setSamples(data_omega);
-    curve_eiler_Eqprime->setSamples(data_eqp);
-    curve_eiler_Eqe->setSamples(data_eqe);
-    curve_eiler_U->setVisible(true);
-    curve_eiler_Delta->setVisible(true);
-    curve_eiler_Omega->setVisible(true);
-    curve_eiler_Eqprime->setVisible(true);
-    curve_eiler_Eqe->setVisible(true);
+    plot_answer_step(plot, QLatin1String("E"), ans);
+    progress_bar_eiler->setValue(progress_bar_eiler->value()+1);
 }
 
-void CalculusWidget::plot_answer_trapeze(const QVector<AnswerItem> ans)
+void CalculusWidget::a_part_of_the_plot_done()
 {
-    qDebug()<<__FUNCTION__<<ans.size();
+    jobs --;
+    view->fitInView(plot);
+    //scene->setSceneRect(plot->boundingRect());
+    view->update();
 
-    QVector<QPointF> data_delta(ans.size());
-    QVector<QPointF> data_omega(ans.size());
-    QVector<QPointF> data_eqe(ans.size());
-    QVector<QPointF> data_eqp(ans.size());
-    QVector<QPointF> data_u(ans.size());
-    for(int i=0; i<ans.size(); i++)
-    {
-        const AnswerItem& a = ans.at(i);
-        data_delta[i] = QPointF(a.time, a.delta);
-        data_omega[i] = QPointF(a.time, a.omega);
-        data_eqp[i] = QPointF(a.time, a.Eqprime);
-        data_eqe[i] = QPointF(a.time, a.Eqe);
-        data_u[i] = QPointF(a.time, a.U);
-    }
-    curve_trapeze_Delta->setSamples(data_delta);
-    curve_trapeze_Omega->setSamples(data_omega);
-    curve_trapeze_Eqprime->setSamples(data_eqp);
-    curve_trapeze_Eqe->setSamples(data_eqe);
-    curve_trapeze_U->setSamples(data_u);
-    curve_trapeze_Delta->setVisible(true);
-    curve_trapeze_Omega->setVisible(true);
-    curve_trapeze_Eqprime->setVisible(true);
-    curve_trapeze_Eqe->setVisible(true);
-    curve_trapeze_U->setVisible(true);
+    enable_everything(jobs == 0);
+    emit enable_start_button(jobs == 0);
 }
 
 //-----------------------------------------------------------------------
@@ -470,7 +457,9 @@ ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
     table->setColumnCount(7);
     QStringList vh;
     vh << "Time" << (QChar(0x03b4)+QLatin1String(" Eiler")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler")) << "Eqe Eiler"
-                 << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze")) << "Eqe Trapeze";
+                 << (QChar(0x03b4)+QLatin1String("E'qe Eiler")) << (QString(0x03c9)+QLatin1String("V Eiler")) << "U Eiler"
+                 << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze")) << "Eqe Trapeze"
+                 << (QChar(0x03b4)+QLatin1String("E'qe  Trapeze")) << (QString(0x03c9)+QLatin1String("V Trapeze")) << "U Trapeze";
     table->setHorizontalHeaderLabels(vh);
     table->verticalHeader()->setVisible(false);
     table->setSortingEnabled(false);
@@ -484,19 +473,23 @@ ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
     l->addWidget(button);
 }
 
-void ToExcel::populate(double dt, const QVector<x2_U_D_E>& data)
+void ToExcel::populate(const AnswerItem& data)
 {
-    table->setRowCount(data.size());
-    for(int row=0; row<data.size(); row++)
-    {
-        table->setItem(row, 0, new QTableWidgetItem(QString::number(dt*row)));
-        table->setItem(row, 1, new QTableWidgetItem(data[row].e ? QString::number(data[row].Ue) : ""));
-        table->setItem(row, 2, new QTableWidgetItem(data[row].e ? QString::number(data[row].De) : ""));
-        table->setItem(row, 3, new QTableWidgetItem(data[row].e ? QString::number(data[row].Ee) : ""));
-        table->setItem(row, 4, new QTableWidgetItem(data[row].t ? QString::number(data[row].Ut) : ""));
-        table->setItem(row, 5, new QTableWidgetItem(data[row].t ? QString::number(data[row].Dt) : ""));
-        table->setItem(row, 6, new QTableWidgetItem(data[row].t ? QString::number(data[row].Et) : ""));
-    }
+    const int row = table->rowCount();
+    table->setRowCount(row + 1);
+
+    table->setItem(row, 0, new QTableWidgetItem(QString::number(data.time)));
+    table->setItem(row, 1, new QTableWidgetItem(QString::number(data.delta)));
+    table->setItem(row, 2, new QTableWidgetItem(QString::number(data.omega)));
+    table->setItem(row, 3, new QTableWidgetItem(QString::number(data.Eqe)));
+    table->setItem(row, 4, new QTableWidgetItem(""));//QString::number(data.Eqeprime)));
+    table->setItem(row, 5, new QTableWidgetItem(QString::number(data.V)));
+    table->setItem(row, 6, new QTableWidgetItem(QString::number(data.U)));
+}
+
+void ToExcel::clear()
+{
+    table->setRowCount(0);
 }
 
 void ToExcel::export_to_excel()
@@ -525,7 +518,5 @@ void ToExcel::export_to_excel()
             << table->item(r,4)->text() << delimiter
             << table->item(r,5)->text() << delimiter
             << table->item(r,6)->text() << '\n';
-
-    
 }
 

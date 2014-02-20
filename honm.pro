@@ -10,5 +10,5 @@ CONFIG -= debug
 
 
 # Input
-HEADERS += MainWindow.h params.h Calculus.h
-SOURCES += MainWindow.cc Calculus.cc
+HEADERS += MainWindow.h params.h Calculus.h NoQwt.h
+SOURCES += MainWindow.cc Calculus.cc NoQwt.cc

@@ -1,6 +1,8 @@
 #ifndef __PARAMS_H_
 #define __PARAMS_H_
 
+#include <QMetaType>
+
 struct Params
 {
     struct Consts {
@@ -24,12 +26,6 @@ struct AnswerItem
     double time, delta, omega, Eqe, Eqprime, V, U;
 };
 
-struct x2_U_D_E
-{
-    bool e, t;
-    double Ue, De, Ee;
-    double Ut, Dt, Et;
-    x2_U_D_E() : e(false), t(false) {}
-};
+Q_DECLARE_METATYPE(AnswerItem);
 
 #endif // __PARAMS_H_

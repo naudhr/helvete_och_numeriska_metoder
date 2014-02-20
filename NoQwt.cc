@@ -32,6 +32,11 @@ NoQwtGraphicsView::NoQwtGraphicsView(QWidget* parent)
     //connect(view, SIGNAL(resizeEvent()), SLOG(scale_view()));
 }
 
+NoQwtGraphicsView::~NoQwtGraphicsView()
+{
+    delete pimpl;
+}
+
 void NoQwtGraphicsView::wheelEvent(QWheelEvent* event)
 {
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
@@ -116,6 +121,9 @@ void NoQwtPlotCurve::addData(double x, double y)
 
 void NoQwtPlotCurve::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
+    Q_UNUSED(option);
+    Q_UNUSED(widget);
+
     painter->setPen(pimpl->pen);
     //painter->setBrush(pimpl->brush);
     painter->drawLines(pimpl->points);
@@ -206,6 +214,9 @@ QRectF NoQwtPlot::boundingRect() const
 
 void NoQwtPlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
+    Q_UNUSED(option);
+    Q_UNUSED(widget);
+
     pimpl->paintGrid(painter);
     pimpl->paintAxles(painter);
     pimpl->paintAxleNocks(painter);

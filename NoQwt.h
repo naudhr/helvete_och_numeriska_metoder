@@ -21,6 +21,7 @@ class NoQwtGraphicsView : public QGraphicsView
     Impl* pimpl;
 
   public:
+    ~NoQwtGraphicsView();
     NoQwtGraphicsView(QWidget* parent);
     void wheelEvent(QWheelEvent* event);
     void mouseReleaseEvent(QMouseEvent* event);
