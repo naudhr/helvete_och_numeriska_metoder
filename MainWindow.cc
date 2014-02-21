@@ -67,6 +67,7 @@ CentralWidget::CentralWidget() : QWidget(NULL)
     connect(start_button, SIGNAL(clicked()), SLOT(start()));
     connect(calculus, SIGNAL(enable_start_button(bool)), start_button, SLOT(setEnabled(bool)));
     connect(calculus, SIGNAL(to_excel_populate(AnswerItem,int)), to_excel, SLOT(populate(AnswerItem,int)));
+    connect(calculus, SIGNAL(enable_start_button(bool)), to_excel, SLOT(make_up(bool)));
 }
 
 void CentralWidget::start()
@@ -130,6 +131,10 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     max_iterations->setValidator(new QIntValidator(5,5000,this));
 
     QHBoxLayout* prb = new QHBoxLayout;
+    online_plotting = new QCheckBox("Online",this);
+    prb->addWidget(online_plotting);
+    prb->addSpacing(30);
+
     enable_eiler = new QCheckBox(this);
     enable_eiler->setChecked(false);
     progress_bar_eiler = new QProgressBar(this);
@@ -305,6 +310,7 @@ void CalculusWidget::start(const Params::Consts& reg)
 
 void CalculusWidget::enable_everything(bool e)
 {
+    online_plotting->setEnabled(e);
     Y11->setEnabled(e); Y12->setEnabled(e); A11->setEnabled(e); A12->setEnabled(e);
     Y11em->setEnabled(e); Y12em->setEnabled(e); A11em->setEnabled(e); A12em->setEnabled(e); Pd->setEnabled(e);
     Delta0->setEnabled(e); Eqe0->setEnabled(e); Eqprime0->setEnabled(e); U0->setEnabled(e); V0->setEnabled(e);
@@ -352,6 +358,8 @@ void CalculusWidget::sequensive_step(const AnswerItem& ans)
     plot_answer_step(plot, QLatin1String("S"), ans);
     progress_bar_sequensive->setValue(progress_bar_sequensive->value()+1);
     emit to_excel_populate(ans,2);
+    if(online_plotting->isChecked())
+        view->fitInView(plot);
 }
 
 void CalculusWidget::parallel_step(const AnswerItem& ans)
@@ -359,6 +367,8 @@ void CalculusWidget::parallel_step(const AnswerItem& ans)
     plot_answer_step(plot, QLatin1String("P"), ans);
     progress_bar_parallel->setValue(progress_bar_parallel->value()+1);
     emit to_excel_populate(ans,3);
+    if(online_plotting->isChecked())
+        view->fitInView(plot);
 }
 
 void CalculusWidget::trapeze_step(const AnswerItem& ans)
@@ -366,6 +376,8 @@ void CalculusWidget::trapeze_step(const AnswerItem& ans)
     plot_answer_step(plot, QLatin1String("T"), ans);
     progress_bar_trapeze->setValue(progress_bar_trapeze->value()+1);
     emit to_excel_populate(ans,1);
+    if(online_plotting->isChecked())
+        view->fitInView(plot);
 }
 
 void CalculusWidget::eiler_step(const AnswerItem& ans)
@@ -373,6 +385,8 @@ void CalculusWidget::eiler_step(const AnswerItem& ans)
     plot_answer_step(plot, QLatin1String("E"), ans);
     progress_bar_eiler->setValue(progress_bar_eiler->value()+1);
     emit to_excel_populate(ans,0);
+    if(online_plotting->isChecked())
+        view->fitInView(plot);
 }
 
 void CalculusWidget::a_part_of_the_plot_done()
@@ -503,9 +517,12 @@ void ToExcel::populate(const AnswerItem& data, int set_no)
     //table->setItem(row, set_off+6, new QTableWidgetItem(""));//QString::number(data.Eqeprime)));
 }
 
-void ToExcel::clear()
+void ToExcel::make_up(bool filled)
 {
-    table->setRowCount(0);
+    if(filled)
+        table->resizeColumnsToContents();
+    else
+        table->setRowCount(0);
 }
 
 void ToExcel::export_to_excel()

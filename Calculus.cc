@@ -617,7 +617,12 @@ CalculusSequensive::Impl::Xj CalculusSequensive::Impl::calculate_xj(const X& x_n
     xj_n(5) = X7;
     xj_n(6) = X9;
     xj_n(7) = X0;
+
     xj_n(8) = Eqe;
+
+    //xj_n(8) = qMin(xj(8), 2*p.reg.Eqenom);
+    //xj_n(8) = qMax(xj(8), 0.);
+
     return xj_n;
 }
 

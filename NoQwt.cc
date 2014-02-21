@@ -29,6 +29,7 @@ NoQwtGraphicsView::NoQwtGraphicsView(QWidget* parent)
 
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setTransform(QTransform::fromScale(1,-1));
+    //setDragMode(ScrollHandDrag);
     //connect(view, SIGNAL(resizeEvent()), SLOG(scale_view()));
 }
 
@@ -45,11 +46,13 @@ void NoQwtGraphicsView::wheelEvent(QWheelEvent* event)
         if(pimpl->scales.size() < 1000) {
             scale(pimpl->scaleFactor, pimpl->scaleFactor);
             pimpl->scales.push(QPointF(pimpl->scaleFactor, pimpl->scaleFactor));
+            emit scaled();
         }
     } else { // Zooming out
         if(not pimpl->scales.isEmpty()) {
             const QPointF s = pimpl->scales.pop();
             scale(1.0 / s.x(), 1.0 / s.y());
+            emit scaled();
         }
     }
 }
@@ -62,6 +65,7 @@ void NoQwtGraphicsView::mouseReleaseEvent(QMouseEvent* event)
             const QPointF s = pimpl->scales.pop();
             scale(1.0 / s.x(), 1.0 / s.y());
         }
+        emit scaled();
         event->accept();
     }
     else
@@ -149,22 +153,29 @@ struct NoQwtPlot::Impl
 {
     QString title, x_title, y_title;
     QMap<QString,NoQwtPlotCurve*> curves;
+    QVector<QLineF> v_grid, h_grid;
     QRectF boundingRect;
-    QPen axles_pen;
+    QPen axles_pen, grid_pen;
 
     Impl(const QString& t, const QString& x, const QString& y)
         : title(t), x_title(x), y_title(y)
     {
         axles_pen.setColor(Qt::black);
+        grid_pen.setColor(QColor(127,127,127,127));
+        grid_pen.setStyle(Qt::DotLine);
     }
+    QRectF view_box(const QGraphicsItem* i);
 
     void paintGrid(QPainter *painter);
     void paintAxles(QPainter *painter);
-    void paintAxleNocks(QPainter *painter);
+    void paintAxleNocks(QPainter *painter, const NoQwtPlot*);
 };
 
-void NoQwtPlot::Impl::paintGrid(QPainter*)
+void NoQwtPlot::Impl::paintGrid(QPainter* painter)
 {
+    painter->setPen(grid_pen);
+    painter->drawLines(v_grid);
+    painter->drawLines(h_grid);
 }
 
 void NoQwtPlot::Impl::paintAxles(QPainter* painter)
@@ -174,24 +185,31 @@ void NoQwtPlot::Impl::paintAxles(QPainter* painter)
     painter->drawLine(boundingRect.topLeft(), boundingRect.bottomLeft());
 }
 
-void NoQwtPlot::Impl::paintAxleNocks(QPainter* painter)
+void NoQwtPlot::Impl::paintAxleNocks(QPainter* painter, const NoQwtPlot* plot)
 {
-    painter->setPen(axles_pen);
+    const QRectF box = view_box(plot);
 
-    const qreal box_w = boundingRect.right() - boundingRect.left();
-    const qreal box_h = boundingRect.right() - boundingRect.left();
+    QPointF p;
 
-    qreal nock_step = 1.;
-    while(box_w < 6 * nock_step)
-        nock_step /= 10;
+    const QLineF left_box_line(box.topLeft(), box.bottomLeft());
 
-    qreal nock_pos = nock_step * int(boundingRect.left() / nock_step);
-    do {
-        const QPointF m_pos(nock_pos, boundingRect.top() + box_h/20);
-        painter->drawLine(nock_pos, boundingRect.top(), m_pos.x(), m_pos.y());
-    //    painter->drawText(m_pos, QString::number(nock_pos));
-        nock_pos += nock_step;
-    } while(nock_pos < boundingRect.right());
+    foreach(const QLineF& h, h_grid)
+        if(h.intersect(left_box_line, &p))
+            ;//painter->drawText(p, QString::number(h.y1()));
+
+    const QLineF top_box_line(box.topLeft(), box.topRight());
+
+    foreach(const QLineF& v, v_grid)
+        if(v.intersect(top_box_line, &p))
+            ;//painter->drawText(p, QString::number(v.x1()));
+}
+
+QRectF NoQwtPlot::Impl::view_box(const QGraphicsItem* i)
+{
+    const QGraphicsView* view = i->scene()->views().at(0);
+    const QRect portRect = view->viewport()->rect();
+    const QRectF sceneRect = view->mapToScene(portRect).boundingRect();
+    return i->mapRectFromScene(sceneRect);
 }
 
 //-----------------------------------------------------------------------
@@ -200,6 +218,10 @@ NoQwtPlot::NoQwtPlot(QGraphicsScene* scene, const QString& t, const QString& x, 
     : pimpl(new Impl(t,x,y))
 {
     scene->addItem(this);
+    QGraphicsView* view = scene->views().at(0);
+    connect(view, SIGNAL(scaled()), this, SLOT(scaled()));
+
+    setFlag(QGraphicsItem::ItemClipsChildrenToShape);
 }
 
 NoQwtPlot::~NoQwtPlot()
@@ -219,7 +241,7 @@ void NoQwtPlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 
     pimpl->paintGrid(painter);
     pimpl->paintAxles(painter);
-    pimpl->paintAxleNocks(painter);
+    pimpl->paintAxleNocks(painter, this);
 }
 
 void NoQwtPlot::add_curve(NoQwtPlotCurve* curve, const QString& tag)
@@ -241,11 +263,39 @@ void NoQwtPlot::childGeometryChanged()
     pimpl->boundingRect = QRectF();
     foreach(const QGraphicsItem* c, childItems())
         pimpl->boundingRect |= c->boundingRect();
+    scaled(); // не масштабировано, конечно, но boundingRect-то изменился.
 }
 
 void NoQwtPlot::reset()
 {
     foreach(NoQwtPlotCurve* c, pimpl->curves)
         c->reset();
+}
+
+void NoQwtPlot::scaled()
+{
+    const QRectF box = pimpl->view_box(this);
+
+    qreal nock_h_step = 10.;
+    while(box.width() < 2 * nock_h_step)
+        nock_h_step /= 10;
+
+    pimpl->v_grid.clear();
+
+    for(qreal nock_pos = 0.; nock_pos < pimpl->boundingRect.right(); nock_pos += nock_h_step)
+        pimpl->v_grid.append(QLineF(nock_pos, pimpl->boundingRect.top(), nock_pos, pimpl->boundingRect.bottom()));
+    for(qreal nock_pos = 0.; nock_pos > pimpl->boundingRect.left(); nock_pos -= nock_h_step)
+        pimpl->v_grid.append(QLineF(nock_pos, pimpl->boundingRect.top(), nock_pos, pimpl->boundingRect.bottom()));
+
+    qreal nock_v_step = 10.;
+    while(box.height() < 2 * nock_v_step)
+        nock_v_step /= 10;
+
+    pimpl->h_grid.clear();
+
+    for(qreal nock_pos = 0.; nock_pos < pimpl->boundingRect.bottom(); nock_pos += nock_v_step)
+        pimpl->h_grid.append(QLineF(pimpl->boundingRect.left(), nock_pos, pimpl->boundingRect.right(), nock_pos));
+    for(qreal nock_pos = 0.; nock_pos > pimpl->boundingRect.top(); nock_pos -= nock_v_step)
+        pimpl->h_grid.append(QLineF(pimpl->boundingRect.left(), nock_pos, pimpl->boundingRect.right(), nock_pos));
 }
 

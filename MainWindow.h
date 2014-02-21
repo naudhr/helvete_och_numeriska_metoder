@@ -56,6 +56,7 @@ class CalculusWidget : public QWidget
     QGraphicsScene* scene;
     NoQwtPlot* plot;
 
+    QCheckBox* online_plotting;
     QCheckBox* enable_eiler;
     QCheckBox* enable_trapeze;
     QCheckBox* enable_sequensive;
@@ -112,7 +113,7 @@ class ToExcel : public QWidget
     void export_to_excel();
   public slots:
     void populate(const AnswerItem& data, int set_no);
-    void clear();
+    void make_up(bool filled);
 };
 
 #endif // __MAIN_WINDOW_H_

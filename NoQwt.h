@@ -25,6 +25,9 @@ class NoQwtGraphicsView : public QGraphicsView
     NoQwtGraphicsView(QWidget* parent);
     void wheelEvent(QWheelEvent* event);
     void mouseReleaseEvent(QMouseEvent* event);
+
+  signals:
+    void scaled();
 };
 
 class NoQwtPlot : public QGraphicsObject
@@ -50,6 +53,7 @@ class NoQwtPlot : public QGraphicsObject
 
   public slots:
     void reset();
+    void scaled();
 
   private slots:
     void childGeometryChanged();
