@@ -324,9 +324,10 @@ void NoQwtPlot::scaled()
     pimpl->labels.clear();
 
     QPointF p;
+    const QRectF b = box.adjusted(-box.width(), -box.height(), box.width(), box.height());
     foreach(const QLineF& h, pimpl->h_grid)
         foreach(const QLineF& v, pimpl->v_grid)
-            if(h.intersect(v, &p))
+            if(h.intersect(v, &p) and b.contains(p))
             {
                 QGraphicsTextItem* t = new QGraphicsTextItem(QString("%1 x %2").arg(p.x()).arg(p.y()), this);
                 t->setFlag(ItemIgnoresTransformations);

@@ -158,12 +158,8 @@ template <class Method> typename Method::X solve_newton_impl(const Method* pimpl
         const typename Method::X delta_x_i = solve_gauss(I, W);
         x_i_1 += delta_x_i;
         if(W.less_then_eps(pimpl->p.eps) and delta_x_i.less_then_eps(pimpl->p.eps))
-        {
-            if(pimpl->p.dirty_hack)
-                pimpl->dirty_hack(x_i_1);
             return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
-        }
     }
     throw NewtonDoesNotConverge(n_steps);
 }
@@ -224,7 +220,7 @@ struct CalculusEiler::Impl
 
     X calculate_W(const X& x_i_1) const;
     IMatrix calculate_I(const X& x_i_1) const;
-    void dirty_hack(X& x) const;
+    void dirty_hack();
 
     Impl(const Params& _p) : p(_p)
     {
@@ -242,8 +238,10 @@ struct CalculusEiler::Impl
     Params p;
 };
 
-void CalculusEiler::Impl::dirty_hack(X& x) const
+void CalculusEiler::Impl::dirty_hack()
 {
+    if(not p.dirty_hack)
+        return;
     x(3) = qMin(x(3), 2*p.reg.Eqenom);
     x(3) = qMax(x(3), 0.);
 }
@@ -374,6 +372,7 @@ void CalculusEiler::solve_newton(double t)
     pimpl->e = recalculate_equiv_params(t, pimpl->x(11), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
     pimpl->x = solve_newton_impl(pimpl);
+    pimpl->dirty_hack();
 }
 
 //-----------------------------------------------------------------------
@@ -387,7 +386,7 @@ struct CalculusTrapeze::Impl
 
     X calculate_W(const X& x_i_1) const;
     IMatrix calculate_I(const X& x_i_1) const;
-    void dirty_hack(X& x) const;
+    void dirty_hack();
 
     Impl(const Params& _p) : p(_p)
     {
@@ -405,8 +404,10 @@ struct CalculusTrapeze::Impl
     Params p;
 };
 
-void CalculusTrapeze::Impl::dirty_hack(X& x) const
+void CalculusTrapeze::Impl::dirty_hack()
 {
+    if(not p.dirty_hack)
+        return;
     x(3) = qMin(x(3), 2*p.reg.Eqenom);
     x(3) = qMax(x(3), 0.);
 }
@@ -541,6 +542,7 @@ void CalculusTrapeze::solve_newton(double t)
     pimpl->e = recalculate_equiv_params(t, pimpl->x(11), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
     pimpl->x = solve_newton_impl(pimpl);
+    pimpl->dirty_hack();
 }
 
 
@@ -558,7 +560,7 @@ struct CalculusSequensive::Impl
     IMatrix calculate_I(const X& x_i_1) const;
 
     Xj calculate_xj(const X& x_n, const X& x_n_1, const Xj& xj_n_1) const;
-    void dirty_hack(X& ) const {}
+    void dirty_hack();
 
     Impl(const Params& _p) : p(_p)
     {
@@ -576,6 +578,14 @@ struct CalculusSequensive::Impl
     Equiv e;
     Params p;
 };
+
+void CalculusSequensive::Impl::dirty_hack()
+{
+    if(not p.dirty_hack)
+        return;
+    xj(8) = qMin(xj(8), 2*p.reg.Eqenom);
+    xj(8) = qMax(xj(8), 0.);
+}
 
 #define _exp(T) std::exp(-dt/(T))
 #define n_exp(T) (1. - _exp(T))
@@ -613,11 +623,7 @@ CalculusSequensive::Impl::Xj CalculusSequensive::Impl::calculate_xj(const X& x_n
     xj_n(5) = X7;
     xj_n(6) = X9;
     xj_n(7) = X0;
-
     xj_n(8) = Eqe;
-
-    //xj_n(8) = qMin(xj(8), 2*p.reg.Eqenom);
-    //xj_n(8) = qMax(xj(8), 0.);
 
     return xj_n;
 }
@@ -720,6 +726,7 @@ void CalculusSequensive::solve_newton(double t)
     // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
     pimpl->e = recalculate_equiv_params(t, pimpl->x(4), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
+    pimpl->dirty_hack();
     Impl::X x = solve_newton_impl(pimpl);
     pimpl->xj = pimpl->calculate_xj(x, pimpl->x, pimpl->xj);
     pimpl->x = x;
@@ -751,7 +758,7 @@ struct CalculusParallel::Impl
     IMatrix calculate_I(const X& ) const { return IMatrix(); }
 
     //Xj calculate_xj(const X& x_n, const X& x_n_1, const Xj& xj_n_1) const;
-    void dirty_hack(X& ) const {}
+    void dirty_hack();
 
     Impl(const Params& _p) : p(_p)
     {
@@ -769,6 +776,11 @@ struct CalculusParallel::Impl
     Params p;
 };
 
+void CalculusParallel::Impl::dirty_hack()
+{
+    if(not p.dirty_hack)
+        return;
+}
 //-----------------------------------------------------------------------
 
 CalculusParallel::CalculusParallel(const Params& p) : Calculus(p), pimpl(new CalculusParallel::Impl(p)) {}
