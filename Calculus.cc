@@ -726,9 +726,9 @@ void CalculusSequensive::solve_newton(double t)
     // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
     pimpl->e = recalculate_equiv_params(t, pimpl->x(4), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
-    pimpl->dirty_hack();
     Impl::X x = solve_newton_impl(pimpl);
     pimpl->xj = pimpl->calculate_xj(x, pimpl->x, pimpl->xj);
+    pimpl->dirty_hack();
     pimpl->x = x;
 }
 
