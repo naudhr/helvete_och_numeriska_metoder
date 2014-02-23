@@ -159,7 +159,8 @@ template <class Method> typename Method::X solve_newton_impl(const Method* pimpl
         x_i_1 += delta_x_i;
         if(W.less_then_eps(pimpl->p.eps) and delta_x_i.less_then_eps(pimpl->p.eps))
         {
-            pimpl->dirty_hack(x_i_1);
+            if(pimpl->p.dirty_hack)
+                pimpl->dirty_hack(x_i_1);
             return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
         }

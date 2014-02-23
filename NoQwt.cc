@@ -15,6 +15,7 @@
 #include <QListWidget>
 #include <QPixmap>
 #include <QLabel>
+#include <QMessageBox>
 #include <QDebug>
 
 //-----------------------------------------------------------------------
@@ -26,6 +27,7 @@ struct NoQwtGraphicsView::Impl
     QStack<QPointF> scales;
     qreal scaleFactor;
     NoQwtPlotLegend* legend;
+    //QVector<QPointF> h_nocks, v_nocks;
 };
 
 NoQwtGraphicsView::NoQwtGraphicsView(QWidget* parent)
@@ -88,12 +90,11 @@ void NoQwtGraphicsView::mouseReleaseEvent(QMouseEvent* event)
 struct NoQwtPlotCurve::Impl
 {
     QPen pen;
-    QBrush brush;
     QString title;
     QVector<QPointF> points;
     QRectF boundingRect;
 
-    Impl(const QPen& p, const QBrush& b, const QString& t) : pen(p), brush(b), title(t)
+    Impl(const QPen& p, const QString& t) : pen(p), title(t)
     {
         //pen.setCosmetic(true);
     }
@@ -109,9 +110,9 @@ const QString& NoQwtPlotCurve::label() const
     return pimpl->title;
 }
 
-NoQwtPlotCurve::NoQwtPlotCurve(NoQwtPlot* parent, const QString& t, const QPen& p, const QBrush& b, const QString& tag)
+NoQwtPlotCurve::NoQwtPlotCurve(NoQwtPlot* parent, const QString& t, const QPen& p, const QString& tag)
     : QGraphicsObject(parent),
-      pimpl(new Impl(p,b,t))
+      pimpl(new Impl(p,t))
 {
     parent->add_curve(this, tag);
 }
@@ -146,7 +147,6 @@ void NoQwtPlotCurve::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
     Q_UNUSED(widget);
 
     painter->setPen(pimpl->pen);
-    //painter->setBrush(pimpl->brush);
     painter->drawPolyline(pimpl->points.data(), pimpl->points.size());
 }
 
@@ -204,9 +204,9 @@ void NoQwtPlot::Impl::paintGrid(QPainter* painter)
 
 void NoQwtPlot::Impl::paintAxles(QPainter* painter)
 {
-    painter->setPen(axles_pen);
-    painter->drawLine(boundingRect.topLeft(), boundingRect.topRight());
-    painter->drawLine(boundingRect.topLeft(), boundingRect.bottomLeft());
+    //painter->setPen(axles_pen);
+    //painter->drawLine(boundingRect.topLeft(), boundingRect.topRight());
+    //painter->drawLine(boundingRect.topLeft(), boundingRect.bottomLeft());
 }
 
 void NoQwtPlot::Impl::paintAxleNocks(QPainter* painter)
@@ -286,8 +286,14 @@ void NoQwtPlot::scaled()
     const QRectF box = pimpl->view_box(this);
 
     qreal nock_h_step = 10.;
-    while(box.width() < 2 * nock_h_step)
-        nock_h_step /= 10;
+    while(box.width() < 4 * nock_h_step)
+    {
+        nock_h_step /= 2;
+        if(box.width() < 2 * nock_h_step)
+            nock_h_step /= 2;
+        if(box.width() < 2 * nock_h_step)
+            nock_h_step /= 2.5;
+    }
 
     pimpl->v_grid.clear();
 
@@ -298,7 +304,13 @@ void NoQwtPlot::scaled()
 
     qreal nock_v_step = 10.;
     while(box.height() < 2 * nock_v_step)
-        nock_v_step /= 10;
+    {
+        nock_v_step /= 2;
+        if(box.height() < 2 * nock_v_step)
+            nock_v_step /= 2;
+        if(box.height() < 2 * nock_v_step)
+            nock_v_step /= 2.5;
+    }
 
     pimpl->h_grid.clear();
 

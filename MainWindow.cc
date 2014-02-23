@@ -118,7 +118,7 @@ static QLineEdit* add_double_input(QBoxLayout* layout, const QString& label, con
 
 static void add_plot_curve(NoQwtPlot* plot, const QString& label, int r, int g, int b, const QString& tag)
 {
-    NoQwtPlotCurve* curve = new NoQwtPlotCurve(plot, label, QPen(QColor(r,g,b)), QBrush(Qt::black), tag);
+    NoQwtPlotCurve* curve = new NoQwtPlotCurve(plot, label, QPen(QColor(r,g,b)), tag);
     curve->setVisible(true);
     //return curve;
 }
@@ -171,6 +171,8 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     QHBoxLayout* prb = new QHBoxLayout;
     online_plotting = new QCheckBox("Online",this);
     prb->addWidget(online_plotting);
+    dirty_hack = new QCheckBox("Dirty hack",this);
+    prb->addWidget(dirty_hack);
     prb->addSpacing(30);
 
     enable_eiler = new QCheckBox(this);
@@ -395,6 +397,7 @@ Params CalculusWidget::collect_params()
     p.dt = dt->text().toDouble();
     p.eps = eps->text().toDouble();
     p.max_iterations = max_iterations->text().toUInt();
+    p.dirty_hack = dirty_hack->isChecked();
     return p;
 }
 

@@ -67,7 +67,7 @@ class NoQwtPlotCurve : public QGraphicsObject
 
   public:
 
-    NoQwtPlotCurve(NoQwtPlot *parent, const QString& t, const QPen& p, const QBrush& b, const QString& label);
+    NoQwtPlotCurve(NoQwtPlot *parent, const QString& t, const QPen& p, const QString& label);
     virtual ~NoQwtPlotCurve();
 
     const QPen& pen() const;

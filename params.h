@@ -19,6 +19,7 @@ struct Params
     double Tstart, Tstop, dt;
     double eps;
     size_t max_iterations;
+    bool dirty_hack;
 };
 
 struct AnswerItem

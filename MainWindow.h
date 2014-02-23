@@ -52,6 +52,7 @@ class CalculusWidget : public QWidget
     NoQwtGraphicsView* view;
     NoQwtPlot* plot;
 
+    QCheckBox* dirty_hack;
     QCheckBox* online_plotting;
     QCheckBox* enable_eiler;
     QCheckBox* enable_trapeze;
