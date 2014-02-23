@@ -60,6 +60,7 @@ class CalculusSequensive : public Calculus
  public:
     CalculusSequensive(const Params& _p);
     virtual ~CalculusSequensive() {}
+    void set_X(double x1, double x2, double x4, double x5, double x6, double x7, double x9, double x0);
 };
 
 class CalculusParallel : public Calculus

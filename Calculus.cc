@@ -3,7 +3,6 @@
 #include <QDebug>
 #include <cassert>
 #include <cmath>
-#include <QMessageBox>
 
 // the Trapeze and Eiler matrix and vector statements are fully and trully
 // Lyuba Chich-Pych's intellectual property and thus are subjects of some
@@ -208,12 +207,7 @@ void Calculus::run()
     }
     catch(const NewtonDoesNotConverge& exc)
     {
-        qDebug() << name() << ' ' << (p.Tstop - p.Tstart) / p.dt << "points: NewtonDoesNotConverge";
-        QMessageBox::warning(NULL,"NewtonDoesNotConverge", QString("%1 at %4t\n%2 steps => answer of size %3")
-                                                               .arg(name()).arg(exc.n_steps)
-                                                               .arg(QString::number(static_cast<size_t>((p.Tstop - p.Tstart) / p.dt)))
-                                                               .arg(t));
-        qCritical() << (t-p.Tstart)/p.dt << "points: aaaaand NewtonDoesNotConverge";
+        qCritical() << "NewtonDoesNotConverge:" << name() << "at" << t << ':' << exc.n_steps << "=> answer of size" << (t-p.Tstart)/p.dt;
         return;
     }
 }
@@ -573,6 +567,7 @@ struct CalculusSequensive::Impl
         x(3) = p.start.V0;
         x(4) = p.start.U0;
         memset(&e, 0, sizeof(e)); // to ensure thar Upphi starts with 0.
+        xj(8) = p.start.Eqe0;
     }
 
     X x;
@@ -729,6 +724,17 @@ void CalculusSequensive::solve_newton(double t)
     pimpl->x = x;
 }
 
+void CalculusSequensive::set_X(double x1, double x2, double x4, double x5, double x6, double x7, double x9, double x0)
+{
+    pimpl->xj(0) = x1;
+    pimpl->xj(1) = x2;
+    pimpl->xj(2) = x4;
+    pimpl->xj(3) = x5;
+    pimpl->xj(4) = x6;
+    pimpl->xj(5) = x7;
+    pimpl->xj(6) = x9;
+    pimpl->xj(7) = x0;
+}
 
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------

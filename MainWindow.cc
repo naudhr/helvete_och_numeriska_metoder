@@ -21,9 +21,35 @@
 #include <QFile>
 
 #include <QDebug>
+#include <QMessageBox>
+
+void honmMessageOutput(QtMsgType type, const char *msg)
+{
+    switch(type)
+    {
+        case QtDebugMsg:
+            fprintf(stderr, "[D]: %s\n", msg);
+            break;
+        case QtWarningMsg:
+            fprintf(stderr, "[W]: %s\n", msg);
+            QMessageBox::warning(NULL,"", msg);
+            break;
+        case QtCriticalMsg:
+            fprintf(stderr, "[C]: %s\n", msg);
+            //QMessageBox::critical(NULL,"", msg);
+            QMessageBox::warning(NULL,"", msg);
+            break;
+        case QtFatalMsg:
+            fprintf(stderr, "[F]: %s\n", msg);
+            //QMessageBox::fatal(NULL,"", msg);
+            abort();
+    }
+}
 
 int main(int argc, char *argv[])
 {
+  qInstallMsgHandler(honmMessageOutput);
+
   QApplication qapp(argc,argv);
 
   qRegisterMetaType<AnswerItem>("AnswerItem");
@@ -113,14 +139,6 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11av:"), "0.081", validator);
     A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12av:"), "0.078", validator);
 
-    QHBoxLayout* srt = new QHBoxLayout;
-    srt->addWidget(new QLabel("Initial values:",this));
-    Delta0 = add_double_input(srt, "Delta0:", "1.294", validator);
-    Eqe0 = add_double_input(srt, "Eqe0:", "1.698", validator);
-    Eqprime0 = add_double_input(srt, "Eqprime0:", "0.759", validator);
-    U0 = add_double_input(srt, "U0:", "1.035", validator);
-    V0 = add_double_input(srt, "V0:", "0.353", validator);
-
     QHBoxLayout* cpt = new QHBoxLayout;
     cpt->addWidget(new QLabel("Computational parameters:",this));
     Tstart = add_double_input(cpt, "Tstart:", "0", validator);
@@ -129,6 +147,26 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     eps = add_double_input(cpt, "eps:", "0.005", validator);
     max_iterations = add_double_input(cpt, "max_iterations:", "50", validator);
     max_iterations->setValidator(new QIntValidator(5,5000,this));
+    cpt->addSpacing(30);
+    cpt->addStretch(2);
+    cpt->addWidget(new QLabel("Initial values:",this));
+    Delta0 = add_double_input(cpt, QChar(0x03b4)+QLatin1String("(0):"), "1.294", validator);
+    Eqe0 = add_double_input(cpt, "Eqe(0):", "1.698", validator);
+    Eqprime0 = add_double_input(cpt, "E'q(0):", "0.759", validator);
+    U0 = add_double_input(cpt, "U(0):", "1.035", validator);
+    V0 = add_double_input(cpt, QChar(0x03bd)+QLatin1String("(0):"), "0.353", validator);
+
+    seq_params = new QWidget(this);
+    QHBoxLayout* srt = new QHBoxLayout(seq_params);
+    srt->addWidget(new QLabel("Sequensive related"));
+    seq_x1_0 = add_double_input(srt, "x1(0)", "0", validator);
+    seq_x2_0 = add_double_input(srt, "x2(0)", "0", validator);
+    seq_x4_0 = add_double_input(srt, "x4(0)", "0", validator);
+    seq_x5_0 = add_double_input(srt, "x5(0)", "0", validator);
+    seq_x6_0 = add_double_input(srt, "x6(0)", "0", validator);
+    seq_x7_0 = add_double_input(srt, "x7(0)", "0", validator);
+    seq_x9_0 = add_double_input(srt, "x9(0)", "0", validator);
+    seq_x0_0 = add_double_input(srt, "x10(0)", "0", validator);
 
     QHBoxLayout* prb = new QHBoxLayout;
     online_plotting = new QCheckBox("Online",this);
@@ -170,6 +208,7 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     prb->addSpacing(30);
     enable_parallel = new QCheckBox(this);
     enable_parallel->setChecked(false);
+    enable_parallel->setEnabled(false);
     progress_bar_parallel = new QProgressBar(this);
     progress_bar_parallel->setFormat("Parallel");
     progress_bar_parallel->setMinimum(0);
@@ -180,7 +219,7 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     prb->addWidget(progress_bar_parallel);
 
     view = new NoQwtGraphicsView(this);
-    plot = new NoQwtPlot(view->scene(), "", "", "");
+    plot = new NoQwtPlot(view, "", "", "");
 
     add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Eiler"),160,0,210, "delta E");
     add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler"),210,0,0, "omega E");
@@ -205,20 +244,22 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
 
     QVBoxLayout* l = new QVBoxLayout(this);
     l->addLayout(eqv);
-    l->addLayout(srt);
     l->addLayout(cpt);
+    l->addWidget(seq_params);
     l->addLayout(prb);
     l->addWidget(view,2);
 
-    plot->setVisible(true);
-    progress_bar_eiler->setVisible(true);
-    progress_bar_trapeze->setVisible(true);
+    plot->setVisible(false);
+    //progress_bar_eiler->setVisible(true);
+    //progress_bar_trapeze->setVisible(true);
 
     connect(enable_eiler, SIGNAL(clicked()), SLOT(some_calc_enabled()));
     connect(enable_trapeze, SIGNAL(clicked()), SLOT(some_calc_enabled()));
     connect(enable_sequensive, SIGNAL(clicked()), SLOT(some_calc_enabled()));
     connect(enable_parallel, SIGNAL(clicked()), SLOT(some_calc_enabled()));
     jobs = 0;
+
+    some_calc_enabled();
 }
 
 CalculusWidget::~CalculusWidget()
@@ -235,6 +276,14 @@ void CalculusWidget::some_calc_enabled()
                               enable_trapeze->isChecked() or
                               enable_sequensive->isChecked() or
                               enable_parallel->isChecked() );
+
+    seq_params->setVisible(enable_sequensive->isChecked());
+
+    view->legend()->setVisibleSection("Eiler", enable_eiler->isChecked());
+    view->legend()->setVisibleSection("Trapeze", enable_trapeze->isChecked());
+    view->legend()->setVisibleSection("Sequensive", enable_sequensive->isChecked());
+    view->legend()->setVisibleSection("Parallel", enable_parallel->isChecked());
+    view->legend()->setVisible(true);
 }
 
 void CalculusWidget::start(const Params::Consts& reg)
@@ -279,7 +328,13 @@ void CalculusWidget::start(const Params::Consts& reg)
         progress_bar_sequensive->setValue(0);
         progress_bar_sequensive->setFormat("Sequensive: %v");
 
-        QThread* c = new CalculusSequensive(p);
+        CalculusSequensive* c = new CalculusSequensive(p);
+
+        c->set_X(seq_x1_0->text().toDouble(), seq_x2_0->text().toDouble(),
+                 seq_x4_0->text().toDouble(), seq_x5_0->text().toDouble(),
+                 seq_x6_0->text().toDouble(), seq_x7_0->text().toDouble(),
+                 seq_x9_0->text().toDouble(), seq_x0_0->text().toDouble());
+
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(sequensive_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
@@ -302,7 +357,7 @@ void CalculusWidget::start(const Params::Consts& reg)
     }
 
     plot->reset();
-    plot->setVisible(true);
+    plot->setVisible(online_plotting->isChecked());
 
     enable_everything(jobs == 0);
     emit enable_start_button(jobs == 0);
@@ -393,7 +448,8 @@ void CalculusWidget::a_part_of_the_plot_done()
 {
     jobs --;
     view->fitInView(plot);
-    //scene->setSceneRect(plot->boundingRect());
+    plot->scaled();
+    plot->setVisible(true);
     view->update();
 
     enable_everything(jobs == 0);

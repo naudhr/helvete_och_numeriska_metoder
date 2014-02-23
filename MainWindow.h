@@ -43,17 +43,13 @@ class QProgressBar;
 class QLineEdit;
 class QCheckBox;
 class NoQwtPlot;
-//class QwtPlotCurve;
-//class QwtPlotZoomer;
-class QGraphicsScene;
-class QGraphicsView;
+class NoQwtGraphicsView;
 
 class CalculusWidget : public QWidget
 {
     Q_OBJECT
 
-    QGraphicsView* view;
-    QGraphicsScene* scene;
+    NoQwtGraphicsView* view;
     NoQwtPlot* plot;
 
     QCheckBox* online_plotting;
@@ -71,6 +67,8 @@ class CalculusWidget : public QWidget
     QLineEdit *Tstart, *Tstop, *dt;
     QLineEdit *eps;
     QLineEdit *max_iterations;
+    QLineEdit *seq_x1_0, *seq_x2_0, *seq_x4_0, *seq_x5_0, *seq_x6_0, *seq_x7_0, *seq_x9_0, *seq_x0_0;
+    QWidget* seq_params;
 
     Params collect_params();
     size_t jobs;

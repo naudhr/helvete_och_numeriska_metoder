@@ -8,8 +8,13 @@
 #include <QLineF>
 #include <QStaticText>
 #include <QGraphicsScene>
+#include <QGraphicsTextItem>
 #include <QWheelEvent>
 #include <QStack>
+#include <QHBoxLayout>
+#include <QListWidget>
+#include <QPixmap>
+#include <QLabel>
 #include <QDebug>
 
 //-----------------------------------------------------------------------
@@ -20,6 +25,7 @@ struct NoQwtGraphicsView::Impl
     Impl() : scaleFactor(1.15) {}
     QStack<QPointF> scales;
     qreal scaleFactor;
+    NoQwtPlotLegend* legend;
 };
 
 NoQwtGraphicsView::NoQwtGraphicsView(QWidget* parent)
@@ -29,8 +35,10 @@ NoQwtGraphicsView::NoQwtGraphicsView(QWidget* parent)
 
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setTransform(QTransform::fromScale(1,-1));
-    //setDragMode(ScrollHandDrag);
+    setDragMode(ScrollHandDrag);
     //connect(view, SIGNAL(resizeEvent()), SLOG(scale_view()));
+
+    pimpl->legend = new NoQwtPlotLegend(this);
 }
 
 NoQwtGraphicsView::~NoQwtGraphicsView()
@@ -38,12 +46,17 @@ NoQwtGraphicsView::~NoQwtGraphicsView()
     delete pimpl;
 }
 
+NoQwtPlotLegend* NoQwtGraphicsView::legend()
+{
+    return pimpl->legend;
+}
+
 void NoQwtGraphicsView::wheelEvent(QWheelEvent* event)
 {
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
     if(event->delta() > 0) { // Zoom in
-        if(pimpl->scales.size() < 1000) {
+        if(pimpl->scales.size() < 100) {
             scale(pimpl->scaleFactor, pimpl->scaleFactor);
             pimpl->scales.push(QPointF(pimpl->scaleFactor, pimpl->scaleFactor));
             emit scaled();
@@ -61,15 +74,12 @@ void NoQwtGraphicsView::mouseReleaseEvent(QMouseEvent* event)
 {
     if(event->button()==Qt::RightButton)
     {
-        while(not pimpl->scales.isEmpty()) {
-            const QPointF s = pimpl->scales.pop();
-            scale(1.0 / s.x(), 1.0 / s.y());
-        }
+        fitInView(scene()->items(Qt::AscendingOrder).at(0));
+        pimpl->scales.clear();
         emit scaled();
-        event->accept();
     }
     else
-        event->ignore();
+        QGraphicsView::mouseReleaseEvent(event);
 }
 
 //-----------------------------------------------------------------------
@@ -88,6 +98,16 @@ struct NoQwtPlotCurve::Impl
         //pen.setCosmetic(true);
     }
 };
+
+const QPen& NoQwtPlotCurve::pen() const
+{
+    return pimpl->pen;
+}
+
+const QString& NoQwtPlotCurve::label() const
+{
+    return pimpl->title;
+}
 
 NoQwtPlotCurve::NoQwtPlotCurve(NoQwtPlot* parent, const QString& t, const QPen& p, const QBrush& b, const QString& tag)
     : QGraphicsObject(parent),
@@ -115,12 +135,9 @@ void NoQwtPlotCurve::addData(double x, double y)
         pimpl->boundingRect.setRight( qMax(pimpl->boundingRect.right(), x) );
         pimpl->boundingRect.setTop( qMin(pimpl->boundingRect.top(), y) );
         pimpl->boundingRect.setBottom( qMax(pimpl->boundingRect.bottom(), y) );
-        if(pimpl->points.size() > 1)
-            pimpl->points.append(pimpl->points.back());
         pimpl->points.append(QPointF(x,y));
         emit geometryChanged();
     }
-    //update();
 }
 
 void NoQwtPlotCurve::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
@@ -130,7 +147,7 @@ void NoQwtPlotCurve::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
 
     painter->setPen(pimpl->pen);
     //painter->setBrush(pimpl->brush);
-    painter->drawLines(pimpl->points);
+    painter->drawPolyline(pimpl->points.data(), pimpl->points.size());
 }
 
 QRectF NoQwtPlotCurve::boundingRect() const
@@ -146,14 +163,21 @@ void NoQwtPlotCurve::reset()
     emit geometryChanged();
 }
 
+void NoQwtPlotCurve::toggleVisibility()
+{
+    setVisible(not isVisible());
+}
+
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
 struct NoQwtPlot::Impl
 {
+    NoQwtGraphicsView* view;
     QString title, x_title, y_title;
     QMap<QString,NoQwtPlotCurve*> curves;
     QVector<QLineF> v_grid, h_grid;
+    QVector<QGraphicsTextItem*> labels;
     QRectF boundingRect;
     QPen axles_pen, grid_pen;
 
@@ -168,7 +192,7 @@ struct NoQwtPlot::Impl
 
     void paintGrid(QPainter *painter);
     void paintAxles(QPainter *painter);
-    void paintAxleNocks(QPainter *painter, const NoQwtPlot*);
+    void paintAxleNocks(QPainter *painter);
 };
 
 void NoQwtPlot::Impl::paintGrid(QPainter* painter)
@@ -185,28 +209,13 @@ void NoQwtPlot::Impl::paintAxles(QPainter* painter)
     painter->drawLine(boundingRect.topLeft(), boundingRect.bottomLeft());
 }
 
-void NoQwtPlot::Impl::paintAxleNocks(QPainter* painter, const NoQwtPlot* plot)
+void NoQwtPlot::Impl::paintAxleNocks(QPainter* painter)
 {
-    const QRectF box = view_box(plot);
-
-    QPointF p;
-
-    const QLineF left_box_line(box.topLeft(), box.bottomLeft());
-
-    foreach(const QLineF& h, h_grid)
-        if(h.intersect(left_box_line, &p))
-            ;//painter->drawText(p, QString::number(h.y1()));
-
-    const QLineF top_box_line(box.topLeft(), box.topRight());
-
-    foreach(const QLineF& v, v_grid)
-        if(v.intersect(top_box_line, &p))
-            ;//painter->drawText(p, QString::number(v.x1()));
+    Q_UNUSED(painter);
 }
 
 QRectF NoQwtPlot::Impl::view_box(const QGraphicsItem* i)
 {
-    const QGraphicsView* view = i->scene()->views().at(0);
     const QRect portRect = view->viewport()->rect();
     const QRectF sceneRect = view->mapToScene(portRect).boundingRect();
     return i->mapRectFromScene(sceneRect);
@@ -214,12 +223,13 @@ QRectF NoQwtPlot::Impl::view_box(const QGraphicsItem* i)
 
 //-----------------------------------------------------------------------
 
-NoQwtPlot::NoQwtPlot(QGraphicsScene* scene, const QString& t, const QString& x, const QString& y)
+NoQwtPlot::NoQwtPlot(NoQwtGraphicsView* view, const QString& t, const QString& x, const QString& y)
     : pimpl(new Impl(t,x,y))
 {
-    scene->addItem(this);
-    QGraphicsView* view = scene->views().at(0);
+    pimpl->view = view;
+    view->scene()->addItem(this);
     connect(view, SIGNAL(scaled()), this, SLOT(scaled()));
+    connect(view->legend(), SIGNAL(toggleVisibility(QString)), SLOT(toggleVisibility(QString)));
 
     setFlag(QGraphicsItem::ItemClipsChildrenToShape);
 }
@@ -241,7 +251,7 @@ void NoQwtPlot::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 
     pimpl->paintGrid(painter);
     pimpl->paintAxles(painter);
-    pimpl->paintAxleNocks(painter, this);
+    pimpl->paintAxleNocks(painter);
 }
 
 void NoQwtPlot::add_curve(NoQwtPlotCurve* curve, const QString& tag)
@@ -249,6 +259,7 @@ void NoQwtPlot::add_curve(NoQwtPlotCurve* curve, const QString& tag)
     pimpl->curves[tag] = curve;
     curve->setParentItem(this);
     connect(curve, SIGNAL(geometryChanged()), SLOT(childGeometryChanged()));
+    pimpl->view->legend()->add_curve(curve);
 }
 
 NoQwtPlotCurve* NoQwtPlot::curve(const QString& tag)
@@ -259,11 +270,9 @@ NoQwtPlotCurve* NoQwtPlot::curve(const QString& tag)
 void NoQwtPlot::childGeometryChanged()
 {
     prepareGeometryChange();
-
     pimpl->boundingRect = QRectF();
-    foreach(const QGraphicsItem* c, childItems())
+    foreach(const QGraphicsItem* c, pimpl->curves)
         pimpl->boundingRect |= c->boundingRect();
-    scaled(); // не масштабировано, конечно, но boundingRect-то изменился.
 }
 
 void NoQwtPlot::reset()
@@ -297,5 +306,92 @@ void NoQwtPlot::scaled()
         pimpl->h_grid.append(QLineF(pimpl->boundingRect.left(), nock_pos, pimpl->boundingRect.right(), nock_pos));
     for(qreal nock_pos = 0.; nock_pos > pimpl->boundingRect.top(); nock_pos -= nock_v_step)
         pimpl->h_grid.append(QLineF(pimpl->boundingRect.left(), nock_pos, pimpl->boundingRect.right(), nock_pos));
+
+    foreach(QGraphicsTextItem* t, pimpl->labels)
+        delete t;
+    pimpl->labels.clear();
+
+    QPointF p;
+    foreach(const QLineF& h, pimpl->h_grid)
+        foreach(const QLineF& v, pimpl->v_grid)
+            if(h.intersect(v, &p))
+            {
+                QGraphicsTextItem* t = new QGraphicsTextItem(QString("%1 x %2").arg(p.x()).arg(p.y()), this);
+                t->setFlag(ItemIgnoresTransformations);
+                t->setPos(p);
+                pimpl->labels.append(t);
+            }
 }
 
+void NoQwtPlot::toggleVisibility(const QString& label)
+{
+    foreach(NoQwtPlotCurve* c, pimpl->curves)
+        if(c->label() == label)
+            c->toggleVisibility();
+}
+
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+
+struct NoQwtPlotLegend::Impl
+{
+    QMap<QString, QListWidget*> groups;
+};
+
+//-----------------------------------------------------------------------
+
+NoQwtPlotLegend::NoQwtPlotLegend(NoQwtGraphicsView* parent) : QWidget(parent), pimpl(new Impl)
+{
+    new QHBoxLayout(this);
+    //QHBoxLayout* l = new QHBoxLayout(this);
+    //l->addWidget(new QLabel("Legend:",this),1);
+    setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+}
+
+NoQwtPlotLegend::~NoQwtPlotLegend()
+{
+    delete pimpl;
+}
+
+QSize NoQwtPlotLegend::sizeHint() const
+{
+    return QSize(320, 150);
+}
+
+void NoQwtPlotLegend::add_curve(const NoQwtPlotCurve* curve)
+{
+    const QString group = curve->label().section(' ', -1);
+    QListWidget* list = pimpl->groups.value(group,NULL);
+    if(not list)
+    {
+        QHBoxLayout* grid = static_cast<QHBoxLayout*>(layout());
+        grid->addWidget(list = new QListWidget(this));
+        list->setSelectionMode(QAbstractItemView::NoSelection);
+        list->addItem(group);
+        pimpl->groups.insert(group,list);
+        connect(list, SIGNAL(itemClicked(QListWidgetItem*)), SLOT(someItemClicked(QListWidgetItem*)));
+    }
+    QPixmap p(10,10);
+    p.fill(curve->pen().color());
+    new QListWidgetItem(p, curve->label().section(' ', -2, -2), list);
+}
+
+void NoQwtPlotLegend::setVisibleSection(const QString& group, bool v)
+{
+    if(QListWidget* list = pimpl->groups.value(group,NULL))
+        list->setVisible(v);
+    setVisible(true);
+    move(parentWidget()->width() - width(), 0);
+}
+
+void NoQwtPlotLegend::someItemClicked(QListWidgetItem* item)
+{
+    foreach(QListWidget* list, pimpl->groups)
+        if(list->row(item) >= 0)
+        {
+            emit toggleVisibility(item->text() + " " + list->item(0)->text());
+            QFont f = item->font();
+            f.setItalic(not f.italic());
+            item->setFont(f);
+        }
+}

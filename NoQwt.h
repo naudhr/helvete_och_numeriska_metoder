@@ -8,10 +8,11 @@
 //class QPen;
 //class QBrush;
 class QString;
-class QPainter;
+//class QPainter;
 class QRectF;
 class NoQwtPlotCurve;
 class NoQwtPlotLegend;
+class QListWidgetItem;
 
 class NoQwtGraphicsView : public QGraphicsView
 {
@@ -25,6 +26,7 @@ class NoQwtGraphicsView : public QGraphicsView
     NoQwtGraphicsView(QWidget* parent);
     void wheelEvent(QWheelEvent* event);
     void mouseReleaseEvent(QMouseEvent* event);
+    NoQwtPlotLegend* legend();
 
   signals:
     void scaled();
@@ -38,15 +40,11 @@ class NoQwtPlot : public QGraphicsObject
     Impl* pimpl;
 
   public:
-    NoQwtPlot(QGraphicsScene *parent, const QString& t, const QString& x, const QString& y);
+    NoQwtPlot(NoQwtGraphicsView* parent, const QString& t, const QString& x, const QString& y);
     virtual ~NoQwtPlot();
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     virtual QRectF boundingRect() const;
-
-    void addLegend();
-    void removeLegend();
-    NoQwtPlotLegend *legend();
 
     NoQwtPlotCurve* curve(const QString& label);
     void add_curve(NoQwtPlotCurve* curve, const QString& label);
@@ -54,6 +52,7 @@ class NoQwtPlot : public QGraphicsObject
   public slots:
     void reset();
     void scaled();
+    void toggleVisibility(const QString& label);
 
   private slots:
     void childGeometryChanged();
@@ -71,9 +70,8 @@ class NoQwtPlotCurve : public QGraphicsObject
     NoQwtPlotCurve(NoQwtPlot *parent, const QString& t, const QPen& p, const QBrush& b, const QString& label);
     virtual ~NoQwtPlotCurve();
 
-    const QPen& pen();
-    const QBrush& brush();
-    const QString& title();
+    const QPen& pen() const;
+    const QString& label() const;
 
     void addData(double x, double y);
 
@@ -82,28 +80,35 @@ class NoQwtPlotCurve : public QGraphicsObject
 
   public slots:
     void reset();
+    void toggleVisibility();
 
   signals:
     void geometryChanged();
 };
-/*
-class NoQwtPlotLegend : public QGraphicsObject
+
+class NoQwtPlotLegend : public QWidget
 {
     Q_OBJECT
 
     struct Impl;
     Impl* pimpl;
 
-public:
-    explicit NoQwtPlotLegend(NoQwtPlot* parent);
-    ~NoQwtPlotLegend();
+  private slots:
+    void someItemClicked(QListWidgetItem* item);
 
-    QPainterPath shape() const;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+  protected:
+    virtual QSize sizeHint() const;
 
-protected slots:
-    void itemRemove();
-    void dataItemChange();
+  public:
+
+    explicit NoQwtPlotLegend(NoQwtGraphicsView * parent);
+    virtual ~NoQwtPlotLegend();
+
+    void add_curve(const NoQwtPlotCurve* curve);
+    void setVisibleSection(const QString& group, bool );
+
+  signals:
+    void toggleVisibility(const QString& label);
 };
-*/
-#endif // GRAPHICSPLOTLEGEND_H
+
+#endif // __NO_QWT_H_
