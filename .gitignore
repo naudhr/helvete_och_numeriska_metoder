@@ -6,3 +6,6 @@ moc_*
 *.obj
 *.o
 honm
+*.exe
+Makefile.Release
+Makefile.Debug
