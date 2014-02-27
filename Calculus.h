@@ -13,11 +13,12 @@ class Calculus : public QThread
   protected:
     Params p;
     virtual void run();
-    virtual void emit_x(double t) = 0;
-    virtual void solve_newton(double t) = 0;
+    virtual void emit_x(double t, size_t row, size_t n_steps) = 0;
+    virtual void solve_newton(double t, size_t& n_steps) = 0;
     virtual const char* name() const {  return "";  }
   signals:
     void a_step_done(AnswerItem);
+    void newton_does_not_converge(QString name, double t, size_t n_steps);
   public:
     Calculus(const Params& _p) : p(_p) {}
     virtual ~Calculus() {}
@@ -28,8 +29,8 @@ class CalculusEiler : public Calculus
     Q_OBJECT
     struct Impl;
     Impl* pimpl;
-    virtual void emit_x(double t);
-    virtual void solve_newton(double t);
+    virtual void emit_x(double t, size_t row, size_t n_steps);
+    virtual void solve_newton(double t, size_t& n_steps);
     virtual const char* name() const {  return "Eiler";  }
  public:
     CalculusEiler(const Params& _p);
@@ -41,8 +42,8 @@ class CalculusTrapeze : public Calculus
     Q_OBJECT
     struct Impl;
     Impl* pimpl;
-    virtual void emit_x(double t);
-    virtual void solve_newton(double t);
+    virtual void emit_x(double t, size_t row, size_t n_steps);
+    virtual void solve_newton(double t, size_t& n_steps);
     virtual const char* name() const {  return "Trapeze";  }
  public:
     CalculusTrapeze(const Params& _p);
@@ -54,8 +55,8 @@ class CalculusSequensive : public Calculus
     Q_OBJECT
     struct Impl;
     Impl* pimpl;
-    virtual void emit_x(double t);
-    virtual void solve_newton(double t);
+    virtual void emit_x(double t, size_t row, size_t n_steps);
+    virtual void solve_newton(double t, size_t& n_steps);
     virtual const char* name() const {  return "Sequensive";  }
  public:
     CalculusSequensive(const Params& _p);
@@ -68,8 +69,8 @@ class CalculusParallel : public Calculus
     Q_OBJECT
     struct Impl;
     Impl* pimpl;
-    virtual void emit_x(double t);
-    virtual void solve_newton(double t);
+    virtual void emit_x(double t, size_t row, size_t n_steps);
+    virtual void solve_newton(double t, size_t& n_steps);
     virtual const char* name() const {  return "Parallel";  }
  public:
     CalculusParallel(const Params& _p);

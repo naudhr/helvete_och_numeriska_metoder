@@ -23,33 +23,8 @@
 #include <QDebug>
 #include <QMessageBox>
 
-void honmMessageOutput(QtMsgType type, const char *msg)
-{
-    switch(type)
-    {
-        case QtDebugMsg:
-            fprintf(stderr, "[D]: %s\n", msg);
-            break;
-        case QtWarningMsg:
-            fprintf(stderr, "[W]: %s\n", msg);
-            QMessageBox::warning(NULL,"", msg);
-            break;
-        case QtCriticalMsg:
-            fprintf(stderr, "[C]: %s\n", msg);
-            //QMessageBox::critical(NULL,"", msg);
-            QMessageBox::warning(NULL,"", msg);
-            break;
-        case QtFatalMsg:
-            fprintf(stderr, "[F]: %s\n", msg);
-            //QMessageBox::fatal(NULL,"", msg);
-            abort();
-    }
-}
-
 int main(int argc, char *argv[])
 {
-  qInstallMsgHandler(honmMessageOutput);
-
   QApplication qapp(argc,argv);
 
   qRegisterMetaType<AnswerItem>("AnswerItem");
@@ -92,8 +67,8 @@ CentralWidget::CentralWidget() : QWidget(NULL)
 
     connect(start_button, SIGNAL(clicked()), SLOT(start()));
     connect(calculus, SIGNAL(enable_start_button(bool)), start_button, SLOT(setEnabled(bool)));
-    connect(calculus, SIGNAL(to_excel_populate(AnswerItem,int)), to_excel, SLOT(populate(AnswerItem,int)));
-    connect(calculus, SIGNAL(enable_start_button(bool)), to_excel, SLOT(make_up(bool)));
+    connect(calculus, SIGNAL(to_excel_populate(AnswerItem)), to_excel, SLOT(populate(AnswerItem)), Qt::QueuedConnection);
+    connect(calculus, SIGNAL(enable_start_button(bool)), to_excel, SLOT(make_up(bool)), Qt::QueuedConnection);
 }
 
 void CentralWidget::start()
@@ -294,7 +269,9 @@ void CalculusWidget::start(const Params::Consts& reg)
 
     Params p = collect_params();
     p.reg = reg;
-    const int n = (p.Tstop - p.Tstart)/p.dt;
+    const size_t n = (p.Tstop - p.Tstart)/p.dt;
+    answer_buffer.clear();
+    answer_buffer.reserve(n * 4);
 
     if( enable_eiler->isChecked() )
     {
@@ -305,6 +282,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusEiler(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(eiler_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -319,6 +297,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusTrapeze(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(trapeze_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -339,6 +318,7 @@ void CalculusWidget::start(const Params::Consts& reg)
 
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(sequensive_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -353,6 +333,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusParallel(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(parallel_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -415,7 +396,7 @@ void CalculusWidget::sequensive_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("S"), ans);
     progress_bar_sequensive->setValue(progress_bar_sequensive->value()+1);
-    emit to_excel_populate(ans,2);
+    answer_buffer.append(ans);
     if(online_plotting->isChecked())
         view->fitInView(plot);
 }
@@ -424,7 +405,7 @@ void CalculusWidget::parallel_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("P"), ans);
     progress_bar_parallel->setValue(progress_bar_parallel->value()+1);
-    emit to_excel_populate(ans,3);
+    answer_buffer.append(ans);
     if(online_plotting->isChecked())
         view->fitInView(plot);
 }
@@ -433,7 +414,7 @@ void CalculusWidget::trapeze_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("T"), ans);
     progress_bar_trapeze->setValue(progress_bar_trapeze->value()+1);
-    emit to_excel_populate(ans,1);
+    answer_buffer.append(ans);
     if(online_plotting->isChecked())
         view->fitInView(plot);
 }
@@ -442,7 +423,7 @@ void CalculusWidget::eiler_step(const AnswerItem& ans)
 {
     plot_answer_step(plot, QLatin1String("E"), ans);
     progress_bar_eiler->setValue(progress_bar_eiler->value()+1);
-    emit to_excel_populate(ans,0);
+    answer_buffer.append(ans);
     if(online_plotting->isChecked())
         view->fitInView(plot);
 }
@@ -455,8 +436,21 @@ void CalculusWidget::a_part_of_the_plot_done()
     plot->setVisible(true);
     view->update();
 
-    enable_everything(jobs == 0);
-    emit enable_start_button(jobs == 0);
+    if(jobs == 0)
+    {
+        foreach(const AnswerItem& a, answer_buffer)
+            emit to_excel_populate(a);
+        enable_everything(true);
+        emit enable_start_button(true);
+    }
+}
+
+void CalculusWidget::ndnc(QString name, double t, size_t n_steps)
+{
+    QMessageBox::warning(this, "Newton does not converge",
+                         QString("The Newton algorithm for %1 does not converge\n"
+                                 "at the time %2 after %3 steps")
+                             .arg(name).arg(t).arg(n_steps));
 }
 
 //-----------------------------------------------------------------------
@@ -527,20 +521,21 @@ Params::Consts SystemParamsWidget::collect_params()
 
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
+const size_t set_size = 6;
 
 ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
 {
     table = new QTableWidget(this);
-    table->setColumnCount(21/*25*/);
+    table->setColumnCount(1 + set_size*4);
     QStringList vh;
-    vh << "Time" << (QChar(0x03b4)+QLatin1String(" Eiler")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler")) << "Eqe Eiler"
-                 << (QChar(0x03bd)+QLatin1String(" Eiler")) << "U Eiler" /*<< "E'q Eiler"*/
-                 << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze")) << "Eqe Trapeze"
-                 << (QChar(0x03bd)+QLatin1String(" Trapeze")) << "U Trapeze" /*<< "E'q  Trapeze"*/
-                 << (QChar(0x03b4)+QLatin1String(" Sequensive")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Sequensive")) << "Eqe Sequensive"
-                 << (QChar(0x03bd)+QLatin1String(" Sequensive")) << "U Sequensive" /*<< "E'q  Sequensive"*/
-                 << (QChar(0x03b4)+QLatin1String(" Parallel")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Parallel")) << "Eqe Parallel"
-                 << (QChar(0x03bd)+QLatin1String(" Parallel")) << "U Parallel" /*<< "E'q  Parallel"*/;
+    vh << "Time" << "n" << (QChar(0x03b4)+QLatin1String(" Eiler")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Eiler"))
+                 << "Eqe Eiler" << (QChar(0x03bd)+QLatin1String(" Eiler")) << "U Eiler" /*<< "E'q Eiler"*/
+                 << "n" << (QChar(0x03b4)+QLatin1String(" Trapeze")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze"))
+                 << "Eqe Trapeze" << (QChar(0x03bd)+QLatin1String(" Trapeze")) << "U Trapeze" /*<< "E'q  Trapeze"*/
+                 << "n" << (QChar(0x03b4)+QLatin1String(" Sequensive")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Sequensive"))
+                 << "Eqe Sequensive" << (QChar(0x03bd)+QLatin1String(" Sequensive")) << "U Sequensive" /*<< "E'q  Sequensive"*/
+                 << "n" << (QChar(0x03b4)+QLatin1String(" Parallel")) << (QChar(0x0394)+QString(0x03c9)+QLatin1String(" Parallel"))
+                 << "Eqe Parallel" << (QChar(0x03bd)+QLatin1String(" Parallel")) << "U Parallel" /*<< "E'q  Parallel"*/;
     table->setHorizontalHeaderLabels(vh);
     table->verticalHeader()->setVisible(false);
     table->setSortingEnabled(false);
@@ -554,25 +549,20 @@ ToExcel::ToExcel(QWidget* p) : QWidget(p), table(NULL)
     l->addWidget(button);
 }
 
-void ToExcel::populate(const AnswerItem& data, int set_no)
+void ToExcel::populate(const AnswerItem& data)
 {
-    const int set_size = (table->columnCount()-1)/4;
-    const int set_off = set_size * set_no;
+    const int set_off = set_size * data.set_no;
 
-    int row = 0;
-    for( ; row<table->rowCount(); row++)
-        if(table->item(row,1+set_off) == NULL/*->text().isEmpty()*/)
-            break;
-    if(row >= table->rowCount())
-    {
-        table->setRowCount(row + 1);
-        table->setItem(row, 0, new QTableWidgetItem(QString::number(data.time)));
-    }
-    table->setItem(row, set_off+1, new QTableWidgetItem(QString::number(data.delta)));
-    table->setItem(row, set_off+2, new QTableWidgetItem(QString::number(data.omega)));
-    table->setItem(row, set_off+3, new QTableWidgetItem(QString::number(data.Eqe)));
-    table->setItem(row, set_off+4, new QTableWidgetItem(QString::number(data.V)));
-    table->setItem(row, set_off+5, new QTableWidgetItem(QString::number(data.U)));
+    if(data.row >= table->rowCount())
+        table->setRowCount(data.row + 1);
+    table->setItem(data.row, 0, new QTableWidgetItem(QString::number(data.time)));
+
+    table->setItem(data.row, set_off+1, new QTableWidgetItem(QString::number(data.n_steps)));
+    table->setItem(data.row, set_off+2, new QTableWidgetItem(QString::number(data.delta)));
+    table->setItem(data.row, set_off+3, new QTableWidgetItem(QString::number(data.omega)));
+    table->setItem(data.row, set_off+4, new QTableWidgetItem(QString::number(data.Eqe)));
+    table->setItem(data.row, set_off+5, new QTableWidgetItem(QString::number(data.V)));
+    table->setItem(data.row, set_off+6, new QTableWidgetItem(QString::number(data.U)));
     //table->setItem(row, set_off+6, new QTableWidgetItem(""));//QString::number(data.Eqeprime)));
 }
 
@@ -594,21 +584,17 @@ void ToExcel::export_to_excel()
     QTextStream out(&file);
     const char delimiter = ';';
 
-    out << table->horizontalHeaderItem(0)->text() << delimiter
-        << table->horizontalHeaderItem(1)->text() << delimiter
-        << table->horizontalHeaderItem(2)->text() << delimiter
-        << table->horizontalHeaderItem(3)->text() << delimiter
-        << table->horizontalHeaderItem(4)->text() << delimiter
-        << table->horizontalHeaderItem(5)->text() << delimiter
-        << table->horizontalHeaderItem(6)->text() << '\n';
+    out << table->horizontalHeaderItem(0)->text();
+    for(int c=1; c<table->columnCount(); c++)
+        out << delimiter << table->horizontalHeaderItem(c)->text();
+    out << '\n';
 
     for(int r=0; r<table->rowCount(); r++)
-        out << table->item(r,0)->text() << delimiter
-            << table->item(r,1)->text() << delimiter
-            << table->item(r,2)->text() << delimiter
-            << table->item(r,3)->text() << delimiter
-            << table->item(r,4)->text() << delimiter
-            << table->item(r,5)->text() << delimiter
-            << table->item(r,6)->text() << '\n';
+    {
+        out << table->item(r,0)->text();
+        for(int c=1; c<table->columnCount(); c++)
+            out << delimiter << table->item(r,c)->text();
+        out << '\n';
+    }
 }
 

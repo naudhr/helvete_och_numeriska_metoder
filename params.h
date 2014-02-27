@@ -24,6 +24,7 @@ struct Params
 
 struct AnswerItem
 {
+    size_t row, set_no, n_steps;
     double time, delta, omega, Eqe, Eqprime, V, U;
 };
 

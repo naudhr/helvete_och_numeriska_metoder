@@ -73,6 +73,7 @@ class CalculusWidget : public QWidget
 
     Params collect_params();
     size_t jobs;
+    QVector<AnswerItem> answer_buffer;
 
   private slots:
     void enable_everything(bool);
@@ -82,9 +83,10 @@ class CalculusWidget : public QWidget
     void parallel_step(const AnswerItem& );
     void some_calc_enabled();
     void a_part_of_the_plot_done();
+    void ndnc(QString name, double t, size_t n_steps);
   signals:
     void enable_start_button(bool);
-    void to_excel_populate(const AnswerItem& ans, int set_no);
+    void to_excel_populate(const AnswerItem& ans);
   public:
     CalculusWidget(QWidget* );
     ~CalculusWidget();
@@ -111,7 +113,7 @@ class ToExcel : public QWidget
   private slots:
     void export_to_excel();
   public slots:
-    void populate(const AnswerItem& data, int set_no);
+    void populate(const AnswerItem& data);
     void make_up(bool filled);
 };
 

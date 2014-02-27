@@ -143,20 +143,21 @@ struct NewtonDoesNotConverge {
     const size_t n_steps;
 };
 
-// classical Newton solver
-// templated to provide the same framework for either eiler or trapeze methods
-template <class Method> typename Method::X solve_newton_impl(const Method* pimpl)
+// a classical Newton solver
+// templated to provide the same framework for either methods
+template <class Method> typename Method::X solve_newton_impl(const Method* pimpl, size_t& n_steps)
 {
     // incrementally solving "I*delta_x + W = 0 (where I = W')" until both W and delta_x > eps
     typename Method::X x_i_1 = pimpl->x;
-    size_t n_steps = 0;
-    for(size_t max_iterations=pimpl->p.max_iterations; max_iterations; max_iterations--, n_steps++)
+    n_steps = 0;
+    for(size_t max_iterations=pimpl->p.max_iterations; max_iterations; max_iterations--)
     {
         const typename Method::X W = pimpl->calculate_W(x_i_1);
         const typename Method::IMatrix I = pimpl->calculate_I(x_i_1);
         // converts our NLAS into a LAS and solves it
         const typename Method::X delta_x_i = solve_gauss(I, W);
         x_i_1 += delta_x_i;
+        n_steps++;
         if(W.less_then_eps(pimpl->p.eps) and delta_x_i.less_then_eps(pimpl->p.eps))
             return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
@@ -182,29 +183,20 @@ Equiv recalculate_equiv_params(double t, const double U, const Params& p, Equiv 
 //-----------------------------------------------------------------------
 //-----------------------------------------------------------------------
 
-template <class Vector> AnswerItem make_answer_item(double t, const Vector& x)
-{
-    AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
-    i.time=t, i.delta=x(1), i.omega=x(0), i.Eqe=x(3), i.Eqprime=x(2), i.V=x(10), i.U=x(11);
-    //i.time=t, i.delta=x(7), i.omega=x(4), i.Eqe=x(10), i.Eqprime=x(6), i.V=x(7), i.U=x(8);
-    return i;
-}
-
-//-----------------------------------------------------------------------
-
 // does the real work and emits signal on every time step to update a progress bar
 void Calculus::run()
 {
-    emit_x(0.); // initial vector according to the blueprint
+    size_t n=0, n_steps=0;
+    emit_x(p.Tstart, n++, n_steps); // initial vector according to the blueprint
 
-    for(double t=p.Tstart+p.dt; t<p.Tstop+p.dt; t+=p.dt) try
+    for(double t=p.Tstart+p.dt; t<p.Tstop; t+=p.dt, n++) try
     {
-        solve_newton(t);
-        emit_x(t);
+        solve_newton(t, n_steps);
+        emit_x(t, n, n_steps);
     }
     catch(const NewtonDoesNotConverge& exc)
     {
-        qCritical() << "NewtonDoesNotConverge:" << name() << "at" << t << ':' << exc.n_steps << "=> answer of size" << (t-p.Tstart)/p.dt;
+        emit newton_does_not_converge(name(), t, exc.n_steps);
         return;
     }
 }
@@ -236,6 +228,7 @@ struct CalculusEiler::Impl
     X x;
     Equiv e;
     Params p;
+    size_t n_steps;
 };
 
 void CalculusEiler::Impl::dirty_hack()
@@ -361,17 +354,21 @@ CalculusEiler::Impl::IMatrix CalculusEiler::Impl::calculate_I(const X& x_i_1) co
 
 CalculusEiler::CalculusEiler(const Params& p) : Calculus(p), pimpl(new Impl(p)) {}
 
-void CalculusEiler::emit_x(double t)
+void CalculusEiler::emit_x(double t, size_t row, size_t n_steps)
 {
-    emit a_step_done( make_answer_item(t, pimpl->x) );
+    AnswerItem i;
+    i.time=t, i.row=row, i.set_no=0, i.n_steps=n_steps;
+    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=pimpl->x(3);
+    i.Eqprime=pimpl->x(2), i.V=pimpl->x(10), i.U=pimpl->x(11);
+    emit a_step_done(i);
 }
 
-void CalculusEiler::solve_newton(double t)
+void CalculusEiler::solve_newton(double t, size_t& n_steps)
 {
     // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
     pimpl->e = recalculate_equiv_params(t, pimpl->x(11), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
-    pimpl->x = solve_newton_impl(pimpl);
+    pimpl->x = solve_newton_impl(pimpl, n_steps);
     pimpl->dirty_hack();
 }
 
@@ -402,6 +399,7 @@ struct CalculusTrapeze::Impl
     X x;
     Equiv e;
     Params p;
+    size_t n_steps;
 };
 
 void CalculusTrapeze::Impl::dirty_hack()
@@ -531,17 +529,21 @@ CalculusTrapeze::Impl::IMatrix CalculusTrapeze::Impl::calculate_I(const X& x_i_1
 
 CalculusTrapeze::CalculusTrapeze(const Params& p) : Calculus(p), pimpl(new Impl(p)) {}
 
-void CalculusTrapeze::emit_x(double t)
+void CalculusTrapeze::emit_x(double t, size_t row, size_t n_steps)
 {
-    emit a_step_done( make_answer_item(t, pimpl->x) );
+    AnswerItem i;
+    i.time=t, i.row=row, i.set_no=1, i.n_steps=n_steps;
+    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=pimpl->x(3);
+    i.Eqprime=pimpl->x(2), i.V=pimpl->x(10), i.U=pimpl->x(11);
+    emit a_step_done(i);
 }
 
-void CalculusTrapeze::solve_newton(double t)
+void CalculusTrapeze::solve_newton(double t, size_t& n_steps)
 {
     // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
     pimpl->e = recalculate_equiv_params(t, pimpl->x(11), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
-    pimpl->x = solve_newton_impl(pimpl);
+    pimpl->x = solve_newton_impl(pimpl, n_steps);
     pimpl->dirty_hack();
 }
 
@@ -577,6 +579,7 @@ struct CalculusSequensive::Impl
     Xj xj;
     Equiv e;
     Params p;
+    size_t n_steps;
 };
 
 void CalculusSequensive::Impl::dirty_hack()
@@ -714,19 +717,21 @@ CalculusSequensive::Impl::IMatrix CalculusSequensive::Impl::calculate_I(const X&
 
 CalculusSequensive::CalculusSequensive(const Params& p) : Calculus(p), pimpl(new Impl(p)) {}
 
-void CalculusSequensive::emit_x(double t)
+void CalculusSequensive::emit_x(double t, size_t row, size_t n_steps)
 {
-    AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
-    i.time=t, i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=pimpl->xj(8), i.Eqprime=pimpl->x(2), i.V=pimpl->x(3), i.U=pimpl->x(4);
+    AnswerItem i;
+    i.time=t, i.row=row, i.set_no=2, i.n_steps=n_steps;
+    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=pimpl->xj(8);
+    i.Eqprime=pimpl->x(2), i.V=pimpl->x(3), i.U=pimpl->x(4);
     emit a_step_done(i);
 }
 
-void CalculusSequensive::solve_newton(double t)
+void CalculusSequensive::solve_newton(double t, size_t& n_steps)
 {
     // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
     pimpl->e = recalculate_equiv_params(t, pimpl->x(4), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
-    Impl::X x = solve_newton_impl(pimpl);
+    Impl::X x = solve_newton_impl(pimpl, n_steps);
     pimpl->xj = pimpl->calculate_xj(x, pimpl->x, pimpl->xj);
     pimpl->dirty_hack();
     pimpl->x = x;
@@ -774,6 +779,7 @@ struct CalculusParallel::Impl
     Xj xj;
     Equiv e;
     Params p;
+    size_t n_steps;
 };
 
 void CalculusParallel::Impl::dirty_hack()
@@ -785,18 +791,20 @@ void CalculusParallel::Impl::dirty_hack()
 
 CalculusParallel::CalculusParallel(const Params& p) : Calculus(p), pimpl(new CalculusParallel::Impl(p)) {}
 
-void CalculusParallel::emit_x(double t)
+void CalculusParallel::emit_x(double t, size_t row, size_t n_steps)
 {
-    AnswerItem i = { 0., 0., 0., 0., 0., 0., 0. };
-    i.time=t, i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=pimpl->xj(8), i.Eqprime=pimpl->x(2), i.V=pimpl->x(3), i.U=pimpl->x(4);
+    AnswerItem i;
+    i.time=t, i.row=row, i.set_no=3, i.n_steps=n_steps;
+    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=pimpl->xj(8);
+    i.Eqprime=pimpl->x(2), i.V=pimpl->x(3), i.U=pimpl->x(4);
     emit a_step_done(i);
 }
 
-void CalculusParallel::solve_newton(double t)
+void CalculusParallel::solve_newton(double t, size_t& n_steps)
 {
     // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
     pimpl->e = recalculate_equiv_params(t, pimpl->x(4), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
-    pimpl->x = solve_newton_impl(pimpl);
+    pimpl->x = solve_newton_impl(pimpl, n_steps);
 }
 
