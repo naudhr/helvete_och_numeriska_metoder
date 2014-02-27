@@ -582,6 +582,8 @@ void ToExcel::export_to_excel()
         return;
 
     QTextStream out(&file);
+    out.setGenerateByteOrderMark(true);
+
     const char delimiter = ';';
 
     out << table->horizontalHeaderItem(0)->text();
@@ -593,7 +595,10 @@ void ToExcel::export_to_excel()
     {
         out << table->item(r,0)->text();
         for(int c=1; c<table->columnCount(); c++)
-            out << delimiter << table->item(r,c)->text();
+            if(const QTableWidgetItem* item = table->item(r,c))
+                out << delimiter << item->text();
+            else
+                out << delimiter << ' ';
         out << '\n';
     }
 }
