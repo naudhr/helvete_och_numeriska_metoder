@@ -74,6 +74,7 @@ class NoQwtPlotCurve : public QGraphicsObject
     const QString& label() const;
 
     void addData(double x, double y);
+    QVector<QPointF> points() const;
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     virtual QRectF boundingRect() const;

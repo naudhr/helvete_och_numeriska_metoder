@@ -22,6 +22,7 @@
 
 #include <QDebug>
 #include <QMessageBox>
+#include <cmath>
 
 int main(int argc, char *argv[])
 {
@@ -91,11 +92,11 @@ static QLineEdit* add_double_input(QBoxLayout* layout, const QString& label, con
     return edit;
 }
 
-static void add_plot_curve(NoQwtPlot* plot, const QString& label, int r, int g, int b, const QString& tag)
+static NoQwtPlotCurve* add_plot_curve(NoQwtPlot* plot, const QString& label, int r, int g, int b, const QString& tag)
 {
     NoQwtPlotCurve* curve = new NoQwtPlotCurve(plot, label, QPen(QColor(r,g,b)), tag);
     curve->setVisible(true);
-    //return curve;
+    return curve;
 }
 
 CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
@@ -143,6 +144,9 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     seq_x9_0 = add_double_input(srt, "x9(0)", "0", validator);
     seq_x0_0 = add_double_input(srt, "x10(0)", "0", validator);
 
+    power_part = new QPushButton(QString::fromWCharArray(L"W11, W12, Pг, Pс, Qг, Qс"), this);
+    connect(power_part, SIGNAL(clicked()), SLOT(popup_power_widget()));
+
     QHBoxLayout* prb = new QHBoxLayout;
     online_plotting = new QCheckBox("Online",this);
     prb->addWidget(online_plotting);
@@ -160,6 +164,7 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     progress_bar_eiler->setEnabled(false);
     prb->addWidget(enable_eiler);
     prb->addWidget(progress_bar_eiler);
+    prb->addWidget(power_part);
     prb->addSpacing(30);
     enable_trapeze = new QCheckBox(this);
     enable_trapeze->setChecked(false);
@@ -219,6 +224,13 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     add_plot_curve(plot, "U Sequensive",60,60,60, "u S");
     add_plot_curve(plot, QChar(0x03bd)+QLatin1String(" Sequensive"),0,180,180, "v S");
 
+    /*NoQwtPlotCurve* w1 =*/ add_plot_curve(plot, "W11 Power", 255, 0, 0, "W11");
+    /*NoQwtPlotCurve* w2 =*/ add_plot_curve(plot, "W12 Power", 0, 255, 0, "W12");
+    /*NoQwtPlotCurve* pg =*/ add_plot_curve(plot, QString::fromWCharArray(L"Pг Power"), 0, 0, 255, "pg");
+    /*NoQwtPlotCurve* pc =*/ add_plot_curve(plot, QString::fromWCharArray(L"Pс Power"), 255, 255, 0, "pc");
+    /*NoQwtPlotCurve* qg =*/ add_plot_curve(plot, QString::fromWCharArray(L"Qг Power"), 255, 0, 255, "qg");
+    /*NoQwtPlotCurve* qc =*/ add_plot_curve(plot, QString::fromWCharArray(L"Qс Power"), 0, 255, 255, "qc");
+
     QVBoxLayout* l = new QVBoxLayout(this);
     l->addLayout(eqv);
     l->addLayout(cpt);
@@ -255,20 +267,80 @@ void CalculusWidget::some_calc_enabled()
                               enable_parallel->isChecked() );
 
     seq_params->setVisible(enable_sequensive->isChecked());
+    power_part->setVisible(enable_eiler->isChecked() and not enable_trapeze->isChecked() and not enable_sequensive->isChecked() and not enable_parallel->isChecked());
 
     view->legend()->setVisibleSection("Eiler", enable_eiler->isChecked());
+    view->legend()->setVisibleSection("Power", enable_eiler->isChecked());
     view->legend()->setVisibleSection("Trapeze", enable_trapeze->isChecked());
     view->legend()->setVisibleSection("Sequensive", enable_sequensive->isChecked());
     view->legend()->setVisibleSection("Parallel", enable_parallel->isChecked());
     view->legend()->setVisible(true);
 }
 
+void CalculusWidget::popup_power_widget()
+{
+    const Params::Consts& r = collected_params.reg;
+    const Params::Repl& eq = collected_params.repl;
+    const double Xdp = (r.Xd-r.Xdprime)/r.Xd/r.Xdprime;
+
+    NoQwtPlotCurve* w1 = plot->curve("W11");
+    NoQwtPlotCurve* w2 = plot->curve("W12");
+    NoQwtPlotCurve* pg = plot->curve("pg");
+    NoQwtPlotCurve* pc = plot->curve("pc");
+    NoQwtPlotCurve* qg = plot->curve("qg");
+    NoQwtPlotCurve* qc = plot->curve("qc");
+
+    w1->reset();
+    w2->reset();
+    pg->reset();
+    pc->reset();
+    qg->reset();
+    qc->reset();
+
+    const NoQwtPlotCurve* d_E = plot->curve("delta E");
+    const NoQwtPlotCurve* p_E = plot->curve("eqp E");
+    const NoQwtPlotCurve* u_E = plot->curve("u E");
+    const NoQwtPlotCurve* v_E = plot->curve("v E");
+
+    for(int i=0, z=1; i<z; i++)
+    {
+        const QVector<QPointF> d = d_E->points();
+        z = d.size();
+        if(i >= z)
+            break;
+
+        const double t = d[i].x();
+        const double delta = d[i].y();
+        const double Eqprime = p_E->points()[i].y();
+        const double U = u_E->points()[i].y();
+        const double V = v_E->points()[i].y();
+        const double s_d_v = std::sin(delta - V);
+        const double c_d_v = std::cos(delta - V);
+
+        const double Pg = Eqprime*U/r.Xdprime*s_d_v - U*U*Xdp*s_d_v*c_d_v;
+        const double Pc = U*U*eq.Y11*sin(eq.A11) + U*r.Uc*eq.Y12*sin(V-eq.A12);
+        const double Qg = Eqprime*U/r.Xdprime*c_d_v - U*U*(c_d_v*c_d_v/r.Xdprime + s_d_v*s_d_v/r.Xd);
+        const double Qc = U*U*eq.Y11*cos(eq.A11) - U*r.Uc*eq.Y12*cos(V-eq.A12);
+        const double W1 = Pg - Pc;
+        const double W2 = Qg - Qc;
+
+        w1->addData(t, W1);
+        w2->addData(t, W2);
+        pg->addData(t, Pg);
+        pc->addData(t, Pc);
+        qg->addData(t, Qg);
+        qc->addData(t, Qc);
+    }
+}
+
 void CalculusWidget::start(const Params::Consts& reg)
 {
     enable_everything(false);
 
-    Params p = collect_params();
-    p.reg = reg;
+    collect_params();
+    collected_params.reg = reg;
+    const Params& p = collected_params;
+
     const size_t n = (p.Tstop - p.Tstart)/p.dt;
     answer_buffer.clear();
     answer_buffer.reserve(n * 4);
@@ -282,7 +354,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusEiler(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(eiler_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -297,7 +369,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusTrapeze(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(trapeze_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -318,7 +390,7 @@ void CalculusWidget::start(const Params::Consts& reg)
 
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(sequensive_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -333,7 +405,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusParallel(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(parallel_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)), Qt::QueuedConnection);
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -356,9 +428,9 @@ void CalculusWidget::enable_everything(bool e)
     eps->setEnabled(e); max_iterations->setEnabled(e);
 }
 
-Params CalculusWidget::collect_params()
+void CalculusWidget::collect_params()
 {
-    Params p;// = {};
+    Params& p = collected_params;
     p.repl.Pd = Pd->text().toDouble();
     p.repl.Y11 = Y11->text().toDouble();
     p.repl.Y12 = Y12->text().toDouble();
@@ -379,7 +451,6 @@ Params CalculusWidget::collect_params()
     p.eps = eps->text().toDouble();
     p.max_iterations = max_iterations->text().toUInt();
     p.dirty_hack = dirty_hack->isChecked();
-    return p;
 }
 
 static void plot_answer_step(NoQwtPlot* plot, const QLatin1String& suffix, const AnswerItem& a)

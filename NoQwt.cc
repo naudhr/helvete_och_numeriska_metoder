@@ -141,6 +141,11 @@ void NoQwtPlotCurve::addData(double x, double y)
     }
 }
 
+QVector<QPointF> NoQwtPlotCurve::points() const
+{
+    return pimpl->points;
+}
+
 void NoQwtPlotCurve::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     Q_UNUSED(option);
@@ -277,6 +282,7 @@ void NoQwtPlot::childGeometryChanged()
 
 void NoQwtPlot::reset()
 {
+    prepareGeometryChange();
     foreach(NoQwtPlotCurve* c, pimpl->curves)
         c->reset();
 }
@@ -392,7 +398,11 @@ void NoQwtPlotLegend::add_curve(const NoQwtPlotCurve* curve)
 void NoQwtPlotLegend::setVisibleSection(const QString& group, bool v)
 {
     if(QListWidget* list = pimpl->groups.value(group,NULL))
+    {
         list->setVisible(v);
+        //for(int i=1, i<list->count(); i++)
+        //    list->item(i)each(QListWidgetItem* item
+    }
     setVisible(true);
     move(parentWidget()->width() - width(), 0);
 }
@@ -400,7 +410,7 @@ void NoQwtPlotLegend::setVisibleSection(const QString& group, bool v)
 void NoQwtPlotLegend::someItemClicked(QListWidgetItem* item)
 {
     foreach(QListWidget* list, pimpl->groups)
-        if(list->row(item) >= 0)
+        if(list->row(item) > 0)
         {
             emit toggleVisibility(item->text() + " " + list->item(0)->text());
             QFont f = item->font();
@@ -408,3 +418,4 @@ void NoQwtPlotLegend::someItemClicked(QListWidgetItem* item)
             item->setFont(f);
         }
 }
+

@@ -70,8 +70,11 @@ class CalculusWidget : public QWidget
     QLineEdit *max_iterations;
     QLineEdit *seq_x1_0, *seq_x2_0, *seq_x4_0, *seq_x5_0, *seq_x6_0, *seq_x7_0, *seq_x9_0, *seq_x0_0;
     QWidget* seq_params;
+    QPushButton* power_part;
 
-    Params collect_params();
+    Params collected_params;
+    void collect_params();
+
     size_t jobs;
     QVector<AnswerItem> answer_buffer;
 
@@ -84,6 +87,7 @@ class CalculusWidget : public QWidget
     void some_calc_enabled();
     void a_part_of_the_plot_done();
     void ndnc(QString name, double t, size_t n_steps);
+    void popup_power_widget();
   signals:
     void enable_start_button(bool);
     void to_excel_populate(const AnswerItem& ans);
