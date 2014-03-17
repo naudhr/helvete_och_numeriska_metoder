@@ -136,6 +136,8 @@ struct Equiv
 {
     double Y11, Y12, A11, A12;
     double Pd, Upphi;
+    double Tsw_low, Tsw_high;
+    Equiv() : Y11(0), Y12(0), A11(0), A12(0), Pd(0), Upphi(0), Tsw_low(-1), Tsw_high(-1) {}
 };
 
 struct NewtonDoesNotConverge {
@@ -175,8 +177,22 @@ Equiv recalculate_equiv_params(double t, const double U, const Params& p, Equiv 
     e.A11 = t<0.12 ? p.repl.A11em : p.repl.A11;
     e.A12 = t<0.12 ? p.repl.A12em : p.repl.A12;
     e.Pd = p.repl.Pd;
-    if(U < 0.85) e.Upphi = 2.*p.reg.Eqenom - (2.*p.reg.Eqenom - p.start.Eqe0)*std::exp(-t/p.reg.Te);
-    if(U > 0.9)  e.Upphi = 0.;
+    if(U < 0.85) {
+        if(e.Tsw_low < 0) {
+            e.Tsw_low = t + 0.09;
+        } else if(t > e.Tsw_low) {
+            e.Upphi = 2.*p.reg.Eqenom - (2.*p.reg.Eqenom - p.start.Eqe0)*std::exp(-t/p.reg.Te);
+            e.Tsw_low = -1.;
+        }
+    }
+    if(U > 0.9) {
+        if(e.Tsw_high < 0) {
+            e.Tsw_high = t + 0.09;
+        } else if(t > e.Tsw_high) {
+            e.Upphi = 0.;
+            e.Tsw_high = -1.;
+        }
+    }
     return e;
 }
 
