@@ -281,7 +281,7 @@ void CalculusWidget::popup_power_widget()
 {
     const Params::Consts& r = collected_params.reg;
     const Params::Repl& eq = collected_params.repl;
-    const double Xdp = (r.Xd-r.Xdprime)/r.Xd/r.Xdprime;
+    Equiv e;
 
     NoQwtPlotCurve* w1 = plot->curve("W11");
     NoQwtPlotCurve* w2 = plot->curve("W12");
@@ -316,11 +316,12 @@ void CalculusWidget::popup_power_widget()
         const double V = v_E->points()[i].y();
         const double s_d_v = std::sin(delta - V);
         const double c_d_v = std::cos(delta - V);
+        e = recalculate_equiv_params(t, U, collected_params, e);
 
-        const double Pg = Eqprime*U/r.Xdprime*s_d_v - U*U*Xdp*s_d_v*c_d_v;
-        const double Pc = U*U*eq.Y11*sin(eq.A11) + U*r.Uc*eq.Y12*sin(V-eq.A12);
-        const double Qg = Eqprime*U/r.Xdprime*c_d_v - U*U*(c_d_v*c_d_v/r.Xdprime + s_d_v*s_d_v/r.Xd);
-        const double Qc = U*U*eq.Y11*cos(eq.A11) - U*r.Uc*eq.Y12*cos(V-eq.A12);
+        const double Pg = CalculusEiler::calculate_Pg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v);
+        const double Pc = CalculusEiler::calculate_Pc(U, V, e.Y11, e.Y12, e.A11, e.A12, r.Uc);
+        const double Qg = CalculusEiler::calculate_Qg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v);
+        const double Qc = CalculusEiler::calculate_Qc(U, V, e.Y11, e.Y12, e.A11, e.A12, r.Uc);
         const double W1 = Pg - Pc;
         const double W2 = Qg - Qc;
 

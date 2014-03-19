@@ -49,10 +49,10 @@ template <size_t N> class X_N : public Matrix_N<N,1>
     }
     bool less_then_eps(double eps) const {
         for(size_t i=0; i<N; i++)
-            if(std::abs((*this)(i)) < eps)
-                ;
-            else
+        {
+            if(std::abs((*this)(i)) > eps)
                 return false;
+        }
         return true;
     }
 };
@@ -132,14 +132,6 @@ template<size_t N> X_N<N> solve_gauss(const IMatrix_N<N>& I, const X_N<N>& W)
 
 //-----------------------------------------------------------------------
 
-struct Equiv
-{
-    double Y11, Y12, A11, A12;
-    double Pd, Upphi;
-    double Tsw_low, Tsw_high;
-    Equiv() : Y11(0), Y12(0), A11(0), A12(0), Pd(0), Upphi(0), Tsw_low(-1), Tsw_high(-1) {}
-};
-
 struct NewtonDoesNotConverge {
     NewtonDoesNotConverge(size_t n) : n_steps(n) {}
     const size_t n_steps;
@@ -160,7 +152,7 @@ template <class Method> typename Method::X solve_newton_impl(const Method* pimpl
         const typename Method::X delta_x_i = solve_gauss(I, W);
         x_i_1 += delta_x_i;
         n_steps++;
-        if(W.less_then_eps(pimpl->p.eps) and delta_x_i.less_then_eps(pimpl->p.eps))
+        if(W.less_then_eps(pimpl->p.eps))// and delta_x_i.less_then_eps(pimpl->p.eps))
             return x_i_1; // luckily, the system depends on the x_k_1 so we can return the new
                           // step value, omitting (x_i_1 - x_k_1) -> x_k_1 + delta_x
     }
@@ -238,7 +230,6 @@ struct CalculusEiler::Impl
         x(3) = p.start.Eqe0;
         x(10) = p.start.V0;
         x(11) = p.start.U0;
-        memset(&e, 0, sizeof(e)); // to ensure thar Upphi starts with 0.
     }
 
     X x;
@@ -253,6 +244,37 @@ void CalculusEiler::Impl::dirty_hack()
         return;
     x(3) = qMin(x(3), 2*p.reg.Eqenom);
     x(3) = qMax(x(3), 0.);
+}
+
+double CalculusEiler::calculate_Pg(double Eqprime, double U,
+                                   double Xdprime, double Xd,
+                                   double s_d_v, double c_d_v)
+{
+    const double Xdp = (Xd-Xdprime)/Xd/Xdprime;
+    return Eqprime*U/Xdprime*s_d_v - U*U*Xdp*s_d_v*c_d_v;
+}
+
+double CalculusEiler::calculate_Pc(double U, double V,
+                                   double Y11, double Y12,
+                                   double A11, double A12,
+                                   double Uc)
+{
+    return U*U*Y11*sin(A11) + U*Uc*Y12*sin(V-A12);
+}
+
+double CalculusEiler::calculate_Qg(double Eqprime, double U,
+                                   double Xdprime, double Xd,
+                                   double s_d_v, double c_d_v)
+{
+    return Eqprime*U/Xdprime*c_d_v - U*U*(c_d_v*c_d_v/Xdprime + s_d_v*s_d_v/Xd);
+}
+
+double CalculusEiler::calculate_Qc(double U, double V,
+                                   double Y11, double Y12,
+                                   double A11, double A12,
+                                   double Uc)
+{
+    return U*U*Y11*cos(A11) - U*Uc*Y12*cos(V-A12);
 }
 
 CalculusEiler::Impl::X CalculusEiler::Impl::calculate_W(const X& x_i_1) const
@@ -276,6 +298,8 @@ CalculusEiler::Impl::X CalculusEiler::Impl::calculate_W(const X& x_i_1) const
                                         const double V = x_i_1(10);
                                         const double U = x_i_1(11);
     const double d_v = delta-V;
+    const double s_d_v = sin(d_v);
+    const double c_d_v = cos(d_v);
 
     X W;
     W(0) = delta - delta_k - dt*domega;
@@ -288,8 +312,14 @@ CalculusEiler::Impl::X CalculusEiler::Impl::calculate_W(const X& x_i_1) const
     W(7) = X8 - X8_k - (dt/r.Tf)*r.K0f*((V - X5)/r.Tphi - X6) + dt/r.T*X8;
     W(8) = X9 - X9_k - (dt/r.Tg)*(r.K1f/r.Tf*((V - X5)/r.Tphi - X6) - r.K1f/r.K0f/r.T*X8 - X9);
     W(9) = Eqe - Eqe_k - (dt/r.Te)*(X3 + X4 + X8 + X9 + e.Upphi - Eqe);
-    W(10) = Eqprime*U/r.Xdprime*sin(d_v) - U*U*Xdp*sin(2*d_v)/2 - U*U*e.Y11*sin(e.A11) - U*r.Uc*e.Y12*sin(V-e.A12);
-    W(11) = Eqprime*U/r.Xdprime*cos(d_v) - U*U*(cos(d_v)*cos(d_v)/r.Xdprime + sin(d_v)*sin(d_v)/r.Xd) - U*U*e.Y11*cos(e.A11) + U*r.Uc*e.Y12*cos(V-e.A12);
+    W(10) = calculate_Pg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v) -
+            calculate_Pc(U, V, e.Y11, e.Y12, e.A11, e.A12, r.Uc);
+    //qDebug()<<"W(10) ="<<calculate_Pg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v)<<"-"
+    //                   <<calculate_Pc(U, V, e.Y11, e.Y12, e.A11, e.A12, r.Uc)<<"="<<W(10);
+    W(11) = calculate_Qg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v) -
+            calculate_Qc(U, V, e.Y11, e.Y12, e.A11, e.A12, r.Uc);
+    //qDebug()<<"W(11) ="<<calculate_Qg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v)<<"-"
+    //                   <<calculate_Qc(U, V, e.Y11, e.Y12, e.A11, e.A12, r.Uc)<<"="<<W(11);
     return W;
 }
 
@@ -409,7 +439,6 @@ struct CalculusTrapeze::Impl
         x(3) = p.start.Eqe0;
         x(10) = p.start.V0;
         x(11) = p.start.U0;
-        memset(&e, 0, sizeof(e)); // to ensure thar Upphi starts with 0.
     }
 
     X x;
@@ -587,7 +616,6 @@ struct CalculusSequensive::Impl
         x(2) = p.start.Eqprime0;
         x(3) = p.start.V0;
         x(4) = p.start.U0;
-        memset(&e, 0, sizeof(e)); // to ensure thar Upphi starts with 0.
         xj(8) = p.start.Eqe0;
     }
 
@@ -788,7 +816,6 @@ struct CalculusParallel::Impl
         x(2) = p.start.Eqprime0;
         x(3) = p.start.V0;
         x(4) = p.start.U0;
-        memset(&e, 0, sizeof(e)); // to ensure thar Upphi starts with 0.
     }
 
     X x;

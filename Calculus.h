@@ -35,6 +35,12 @@ class CalculusEiler : public Calculus
  public:
     CalculusEiler(const Params& _p);
     virtual ~CalculusEiler() {}
+
+    static double calculate_Pg(double Eqprime, double U, double Xdprime, double Xd, double s_d_v, double c_d_v);
+    static double calculate_Qg(double Eqprime, double U, double Xdprime, double Xd, double s_d_v, double c_d_v);
+
+    static double calculate_Pc(double U, double V, double Y11, double Y12, double A11, double A12, double Uc);
+    static double calculate_Qc(double U, double V, double Y11, double Y12, double A11, double A12, double Uc);
 };
 
 class CalculusTrapeze : public Calculus
@@ -76,5 +82,15 @@ class CalculusParallel : public Calculus
     CalculusParallel(const Params& _p);
     virtual ~CalculusParallel() {}
 };
+
+struct Equiv
+{
+    double Y11, Y12, A11, A12;
+    double Pd, Upphi;
+    double Tsw_low, Tsw_high;
+    Equiv() : Y11(0), Y12(0), A11(0), A12(0), Pd(0), Upphi(0), Tsw_low(-1), Tsw_high(-1) {}
+};
+
+Equiv recalculate_equiv_params(double t, const double U, const Params& p, Equiv e);
 
 #endif // __CALCULUS_H_

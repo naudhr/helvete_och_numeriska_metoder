@@ -7,7 +7,7 @@ INCLUDEPATH += .
 
 CONFIG += qwt release qaxcontainer
 CONFIG -= debug
-
+CONFIG += console
 
 # Input
 HEADERS += MainWindow.h params.h Calculus.h NoQwt.h
