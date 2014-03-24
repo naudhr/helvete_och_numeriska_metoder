@@ -86,7 +86,7 @@ class CalculusWidget : public QWidget
     void parallel_step(const AnswerItem& );
     void some_calc_enabled();
     void a_part_of_the_plot_done();
-    void ndnc(QString name, double t, size_t n_steps);
+    void ndnc(QString name, double t, unsigned n_steps);
     void popup_power_widget();
   signals:
     void enable_start_button(bool);

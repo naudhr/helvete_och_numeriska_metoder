@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
   QApplication qapp(argc,argv);
 
   qRegisterMetaType<AnswerItem>("AnswerItem");
+  qRegisterMetaType<AnswerItem>("AnswerItem");
 
   MainWindow w;
   QObject::connect(&w,SIGNAL(quit()),&qapp,SLOT(quit()));
@@ -280,7 +281,6 @@ void CalculusWidget::some_calc_enabled()
 void CalculusWidget::popup_power_widget()
 {
     const Params::Consts& r = collected_params.reg;
-    const Params::Repl& eq = collected_params.repl;
     Equiv e;
 
     NoQwtPlotCurve* w1 = plot->curve("W11");
@@ -355,7 +355,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusEiler(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(eiler_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,unsigned)), SLOT(ndnc(QString,double,unsigned)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -370,7 +370,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusTrapeze(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(trapeze_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,unsigned)), SLOT(ndnc(QString,double,unsigned)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -391,7 +391,7 @@ void CalculusWidget::start(const Params::Consts& reg)
 
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(sequensive_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,unsigned)), SLOT(ndnc(QString,double,unsigned)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -406,7 +406,7 @@ void CalculusWidget::start(const Params::Consts& reg)
         QThread* c = new CalculusParallel(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(parallel_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
-        connect(c, SIGNAL(newton_does_not_converge(QString,double,size_t)), SLOT(ndnc(QString,double,size_t)));
+        connect(c, SIGNAL(newton_does_not_converge(QString,double,unsigned)), SLOT(ndnc(QString,double,unsigned)));
         connect(c, SIGNAL(finished()), c, SLOT(deleteLater()));
         c->start();
         jobs ++;
@@ -517,7 +517,7 @@ void CalculusWidget::a_part_of_the_plot_done()
     }
 }
 
-void CalculusWidget::ndnc(QString name, double t, size_t n_steps)
+void CalculusWidget::ndnc(QString name, double t, unsigned n_steps)
 {
     QMessageBox::warning(this, "Newton does not converge",
                          QString("The Newton algorithm for %1 does not converge\n"

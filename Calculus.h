@@ -18,7 +18,7 @@ class Calculus : public QThread
     virtual const char* name() const {  return "";  }
   signals:
     void a_step_done(AnswerItem);
-    void newton_does_not_converge(QString name, double t, size_t n_steps);
+    void newton_does_not_converge(QString name, double t, unsigned n_steps);
   public:
     Calculus(const Params& _p) : p(_p) {}
     virtual ~Calculus() {}

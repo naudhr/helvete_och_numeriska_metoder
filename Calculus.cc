@@ -50,7 +50,7 @@ template <size_t N> class X_N : public Matrix_N<N,1>
     bool less_then_eps(double eps) const {
         for(size_t i=0; i<N; i++)
         {
-            if(std::abs((*this)(i)) > eps)
+            if(std::isnan((*this)(i)) or std::abs((*this)(i)) > eps)
                 return false;
         }
         return true;
@@ -204,7 +204,7 @@ void Calculus::run()
     }
     catch(const NewtonDoesNotConverge& exc)
     {
-        emit newton_does_not_converge(name(), t, exc.n_steps);
+        emit newton_does_not_converge(name(), t, static_cast<unsigned>(exc.n_steps));
         return;
     }
 }
