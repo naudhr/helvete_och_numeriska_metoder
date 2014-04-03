@@ -668,7 +668,7 @@ void ToExcel::export_to_excel()
         out << table->item(r,0)->text();
         for(int c=1; c<table->columnCount(); c++)
             if(const QTableWidgetItem* item = table->item(r,c))
-                out << delimiter << item->text();
+                out << delimiter << item->text().replace('.',',');
             else
                 out << delimiter << ' ';
         out << '\n';
