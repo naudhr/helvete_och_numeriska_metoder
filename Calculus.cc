@@ -228,6 +228,8 @@ struct CalculusEiler::Impl
         x(1) = p.start.Delta0;
         x(2) = p.start.Eqprime0;
         x(3) = p.start.Eqe0;
+        x(4) = p.reg.K0u*(p.reg.Ur0 - p.start.U0); // x3(0)
+        x(6) = p.start.V0; // x5(0)
         x(10) = p.start.V0;
         x(11) = p.start.U0;
     }
@@ -437,6 +439,8 @@ struct CalculusTrapeze::Impl
         x(1) = p.start.Delta0;
         x(2) = p.start.Eqprime0;
         x(3) = p.start.Eqe0;
+        x(4) = p.reg.K0u*(p.reg.Ur0 - p.start.U0); // x3(0)
+        x(6) = p.start.V0; // x5(0)
         x(10) = p.start.V0;
         x(11) = p.start.U0;
     }
@@ -616,6 +620,11 @@ struct CalculusSequensive::Impl
         x(2) = p.start.Eqprime0;
         x(3) = p.start.V0;
         x(4) = p.start.U0;
+
+        xj(0) = p.start.U0;
+        xj(1) = p.reg.Ur0 - p.start.U0;
+        xj(3) = p.start.V0;
+        xj(7) = p.start.Eqe0;
         xj(8) = p.start.Eqe0;
     }
 
@@ -652,12 +661,12 @@ CalculusSequensive::Impl::Xj CalculusSequensive::Impl::calculate_xj(const X& x_n
     const double X1 = X1_k * _exp(r.Tu) + U - U_k + n_exp(r.Tu) * (U_k - r.Tu/dt * (U - U_k));
     const double X2 = r.Ur0 - X1;
     const double X3 = r.K0u * X2;
-    const double X4 = X4_k * _exp(r.Td0) + r.K1u/dt*(X2 - X2_k) * n_exp(r.Td0);
+    const double X4 = X4_k * _exp(r.Tg) + r.K1u/dt*(X2 - X2_k) * n_exp(r.Tg);
     const double X5 = X5_k * _exp(r.Tphi) + V - V_k + n_exp(r.Tphi) * (V_k - r.Tphi/dt * (V - V_k));
     const double X6 = X6_k * _exp(r.Tf) +  1./dt*(X5 - X5_k) * n_exp(r.Tf);
     const double X7 = X7_k * _exp(r.T ) + r.T/dt*(X6 - X6_k) * n_exp(r.T );
     const double X8 = r.K0f * X7;
-    const double X9 = X9_k * _exp(r.Td0) + r.K1f/dt*(X7 - X7_k) * n_exp(r.Td0);
+    const double X9 = X9_k * _exp(r.Tg) + r.K1f/dt*(X7 - X7_k) * n_exp(r.Tg);
     const double X0 = X3 + X4 + X8 + X9 + p.start.Eqe0 + e.Upphi;
     const double Eqe = Eqe_k* _exp(r.Te) + X0 - X0_k + n_exp(r.Te) * (X0_k - r.Te/dt * (X0 - X0_k));
 
@@ -724,9 +733,9 @@ CalculusSequensive::Impl::IMatrix CalculusSequensive::Impl::calculate_I(const X&
     const double dEqe_Te = 1. - n_exp(r.Te)*r.Te/dt;
 
     const double dEqe_dV = dEqe_Te * (1. - r.Tphi/dt*n_exp(r.Tphi)) * n_exp(r.Tf) * n_exp(r.T)
-                                   * r.T/dt/dt * ( r.K0f + r.K1f/dt * n_exp(r.Td0) );
+                                   * r.T/dt/dt * ( r.K0f + r.K1f/dt * n_exp(r.Tg) );
 
-    const double dEqe_dU = dEqe_Te * (1. - r.Tu/dt*n_exp(r.Tu)) * ( -r.K0u - r.K1u/dt * n_exp(r.Td0) );
+    const double dEqe_dU = dEqe_Te * (1. - r.Tu/dt*n_exp(r.Tu)) * ( -r.K0u - r.K1u/dt * n_exp(r.Tg) );
 
     IMatrix I;
 
@@ -741,8 +750,8 @@ CalculusSequensive::Impl::IMatrix CalculusSequensive::Impl::calculate_I(const X&
 
     I(2,1) = (dt/r.Td0)*U*r.Xd*Xdp*s_d_v;
     I(2,2) = (dt/r.Td0)*r.Xd/r.Xdprime + 1.;
-    I(2,3) = -I(2,1) + dEqe_dV;
-    I(2,4) = -(dt/r.Td0)*r.Xd*Xdp*c_d_v + dEqe_dU;
+    I(2,3) = -I(2,1) - (dt/r.Td0)*dEqe_dV;
+    I(2,4) = -(dt/r.Td0)*(r.Xd*Xdp*c_d_v + dEqe_dU);
 
     I(3,1) = Eqprime*U/r.Xdprime*c_d_v - U*U*Xdp*cos(2*d_v);
     I(3,2) = U/r.Xdprime*s_d_v;

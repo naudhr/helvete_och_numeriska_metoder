@@ -71,6 +71,9 @@ CentralWidget::CentralWidget() : QWidget(NULL)
     connect(calculus, SIGNAL(enable_start_button(bool)), start_button, SLOT(setEnabled(bool)));
     connect(calculus, SIGNAL(to_excel_populate(AnswerItem)), to_excel, SLOT(populate(AnswerItem)), Qt::QueuedConnection);
     connect(calculus, SIGNAL(enable_start_button(bool)), to_excel, SLOT(make_up(bool)), Qt::QueuedConnection);
+    connect(sysparams, SIGNAL(params_changed(Params::Consts)), calculus, SLOT(sysparams_changed(Params::Consts)));
+
+    calculus->sysparams_changed( sysparams->collect_params() );
 }
 
 void CentralWidget::start()
@@ -132,6 +135,10 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     Eqprime0 = add_double_input(cpt, "E'q(0):", "0.759", validator);
     U0 = add_double_input(cpt, "U(0):", "1.035", validator);
     V0 = add_double_input(cpt, QChar(0x03bd)+QLatin1String("(0):"), "0.353", validator);
+
+    connect(U0, SIGNAL(editingFinished()), SLOT(sysparams_changed()));
+    connect(V0, SIGNAL(editingFinished()), SLOT(sysparams_changed()));
+    connect(Eqe0, SIGNAL(editingFinished()), SLOT(sysparams_changed()));
 
     seq_params = new QWidget(this);
     QHBoxLayout* srt = new QHBoxLayout(seq_params);
@@ -334,12 +341,40 @@ void CalculusWidget::popup_power_widget()
     }
 }
 
+void CalculusWidget::sysparams_changed()
+{
+    this->sysparams_changed(collected_params.reg);
+}
+
+void CalculusWidget::sysparams_changed(Params::Consts sc)
+{
+    collect_params();
+    collected_params.reg = sc;
+
+    const Params& p = collected_params;
+
+    seq_x1_0->setEnabled(false);
+    seq_x1_0->setText(U0->text());
+    seq_x2_0->setEnabled(false);
+    seq_x2_0->setText(QString::number(p.reg.Ur0 - p.start.U0));
+    //seq_x4_0->setEditable(false);
+    //seq_x4_0->setValue(QString::number(p.reg.Ur0 - p.start.U0));
+    seq_x5_0->setEnabled(false);
+    seq_x5_0->setText(V0->text());
+    seq_x9_0->setEnabled(false);
+    seq_x9_0->setText(Eqe0->text());
+    seq_x0_0->setEnabled(false);
+    seq_x0_0->setText(Eqe0->text());
+}
+
 void CalculusWidget::start(const Params::Consts& reg)
 {
     enable_everything(false);
 
     collect_params();
     collected_params.reg = reg;
+    sysparams_changed(reg);
+
     const Params& p = collected_params;
 
     const size_t n = (p.Tstop - p.Tstart)/p.dt;
@@ -560,10 +595,35 @@ SystemParamsWidget::SystemParamsWidget(QWidget* p) : QWidget(p)
     Eqenom = add_double_input(oth_l, "Eqenom:", "2.79", validator);
     Uc = add_double_input(oth_l, "Uc:", "1", validator);
 
+    connect(K0f, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(K1f, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Ur0, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(K0u, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(K1u, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(T  , SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Ty , SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Tu , SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Tg , SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Te , SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Tf , SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Tphi, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Td0, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Pt0, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(omega_nom, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Xdprime, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Xd, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Eqenom, SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+    connect(Uc , SIGNAL(editingFinished()), SLOT(emit_params_changed()));
+
     QVBoxLayout* l = new QVBoxLayout(this);
     l->addWidget(reg);
     l->addWidget(tms);
     l->addWidget(oth);
+}
+
+void SystemParamsWidget::emit_params_changed()
+{
+    emit params_changed(collect_params());
 }
 
 Params::Consts SystemParamsWidget::collect_params()

@@ -78,6 +78,10 @@ class CalculusWidget : public QWidget
     size_t jobs;
     QVector<AnswerItem> answer_buffer;
 
+  signals:
+    void enable_start_button(bool);
+    void to_excel_populate(const AnswerItem& ans);
+
   private slots:
     void enable_everything(bool);
     void eiler_step(const AnswerItem& );
@@ -88,9 +92,11 @@ class CalculusWidget : public QWidget
     void a_part_of_the_plot_done();
     void ndnc(QString name, double t, unsigned n_steps);
     void popup_power_widget();
-  signals:
-    void enable_start_button(bool);
-    void to_excel_populate(const AnswerItem& ans);
+    void sysparams_changed();
+
+  public slots:
+    void sysparams_changed(Params::Consts);
+
   public:
     CalculusWidget(QWidget* );
     ~CalculusWidget();
@@ -99,9 +105,15 @@ class CalculusWidget : public QWidget
 
 class SystemParamsWidget : public QWidget
 {
+    Q_OBJECT
+    
     QLineEdit *T, *Ty, *Tu, *Tg, *Te, *Tf, *Tphi, *Td0;
     QLineEdit *Pt0, *omega_nom, *Xdprime, *Xd, *Eqenom, *Uc;
     QLineEdit *K0f, *K1f, *Ur0, *K0u, *K1u;
+  private slots:
+    void emit_params_changed();
+  signals:
+    void params_changed(Params::Consts);
   public:
     SystemParamsWidget(QWidget* );
     Params::Consts collect_params();
