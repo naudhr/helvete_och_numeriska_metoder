@@ -171,7 +171,7 @@ Equiv recalculate_equiv_params(double t, const double U, const Params& p, Equiv 
     e.Pd = p.repl.Pd;
     if(U < 0.85) {
         if(e.Tsw_low < 0) {
-            e.Tsw_low = t + 0.09;
+            e.Tsw_low = t + 0.0;
         } else if(t > e.Tsw_low) {
             e.Upphi = 2.*p.reg.Eqenom - (2.*p.reg.Eqenom - p.start.Eqe0)*std::exp(-t/p.reg.Te);
             e.Tsw_low = -1.;
@@ -179,7 +179,7 @@ Equiv recalculate_equiv_params(double t, const double U, const Params& p, Equiv 
     }
     if(U > 0.9) {
         if(e.Tsw_high < 0) {
-            e.Tsw_high = t + 0.09;
+            e.Tsw_high = t + 0.1;
         } else if(t > e.Tsw_high) {
             e.Upphi = 0.;
             e.Tsw_high = -1.;
@@ -230,6 +230,7 @@ struct CalculusEiler::Impl
         x(3) = p.start.Eqe0;
         x(4) = p.reg.K0u*(p.reg.Ur0 - p.start.U0); // x3(0)
         x(6) = p.start.V0; // x5(0)
+	 //   x(6) = 0.508;
         x(10) = p.start.V0;
         x(11) = p.start.U0;
     }
@@ -313,7 +314,7 @@ CalculusEiler::Impl::X CalculusEiler::Impl::calculate_W(const X& x_i_1) const
     W(6) = X6 - X6_k - (dt/r.Tf)*((V - X5)/r.Tphi - X6);
     W(7) = X8 - X8_k - (dt/r.Tf)*r.K0f*((V - X5)/r.Tphi - X6) + dt/r.T*X8;
     W(8) = X9 - X9_k - (dt/r.Tg)*(r.K1f/r.Tf*((V - X5)/r.Tphi - X6) - r.K1f/r.K0f/r.T*X8 - X9);
-    W(9) = Eqe - Eqe_k - (dt/r.Te)*(X3 + X4 + X8 + X9 + e.Upphi - Eqe);
+    W(9) = Eqe - Eqe_k - (dt/r.Te)*(X3 + X4 + X8 + X9 + p.start.Eqe0 + e.Upphi - Eqe);
     W(10) = calculate_Pg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v) -
             calculate_Pc(U, V, e.Y11, e.Y12, e.A11, e.A12, r.Uc);
     //qDebug()<<"W(10) ="<<calculate_Pg(Eqprime, U, r.Xdprime, r.Xd, s_d_v, c_d_v)<<"-"
@@ -495,7 +496,7 @@ CalculusTrapeze::Impl::X CalculusTrapeze::Impl::calculate_W(const X& x_i_1) cons
     W(7) = X8 - X8_k - dt/r.Tf/2.*r.K0f*((V + V_k - X5 - X5_k)/r.Tphi - X6 - X6_k) + dt/r.T*(X8 + X8_k);
     W(8) = X9 - X9_k - dt/r.Tg/2.*(r.K1f/r.Tf*((V + V_k - X5 - X5_k)/r.Tphi - X6 - X6_k)
             - r.K1f/r.K0f/r.T*(X8 + X8_k) - X9 - X9_k);
-    W(9) = Eqe - Eqe_k - dt/r.Te/2.*(X3 + X3_k + X4 + X4_k + X8 + X8_k + X9 + X9_k + 2.*e.Upphi - Eqe - Eqe_k);
+    W(9) = Eqe - Eqe_k - dt/r.Te/2.*(X3 + X3_k + X4 + X4_k + X8 + X8_k + X9 + X9_k + 2.*e.Upphi + 2.*p.start.Eqe0 - Eqe - Eqe_k);
     W(10) = Eqprime*U/r.Xdprime*sin(d_v) - U*U*Xdp*sin(2*d_v)/2 - U*U*e.Y11*sin(e.A11) - U*r.Uc*e.Y12*sin(V-e.A12);
     W(11) = Eqprime*U/r.Xdprime*cos(d_v) - U*U/r.Xdprime*cos(d_v)*cos(d_v) - U*U/r.Xd*sin(d_v)*sin(d_v) - U*U*e.Y11*cos(e.A11) + U*r.Uc*e.Y12*cos(V-e.A12);
     return W;

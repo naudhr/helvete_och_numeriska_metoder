@@ -109,15 +109,15 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
 
     QHBoxLayout* eqv = new QHBoxLayout;
     eqv->addWidget(new QLabel("Equivalent circuit parameters:",this));
-    Y11 = add_double_input(eqv, "Y11:", "2.523", validator);
-    Y12 = add_double_input(eqv, "Y12:", "2.726", validator);
-    A11 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11:"), "0.089", validator);
-    A12 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12:"), "0.08", validator);
+    Y11 = add_double_input(eqv, "Y11:", "1.684", validator);
+    Y12 = add_double_input(eqv, "Y12:", "1.948", validator);
+    A11 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11:"), "0.061", validator);
+    A12 = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12:"), "0.051", validator);
     Pd = add_double_input(eqv, "Pd:", "5", validator);
-    Y11em = add_double_input(eqv, "Y11av:", "3.085", validator);
-    Y12em = add_double_input(eqv, "Y12av:", "1.862", validator);
-    A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11av:"), "0.081", validator);
-    A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12av:"), "0.078", validator);
+    Y11em = add_double_input(eqv, "Y11av:", "2.082", validator);
+    Y12em = add_double_input(eqv, "Y12av:", "1.398", validator);
+    A11em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("11av:"), "0.056", validator);
+    A12em = add_double_input(eqv, QChar(0x03b1)+QLatin1String("12av:"), "0.049", validator);
 
     QHBoxLayout* cpt = new QHBoxLayout;
     cpt->addWidget(new QLabel("Computational parameters:",this));
@@ -130,11 +130,11 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     cpt->addSpacing(30);
     cpt->addStretch(2);
     cpt->addWidget(new QLabel("Initial values:",this));
-    Delta0 = add_double_input(cpt, QChar(0x03b4)+QLatin1String("(0):"), "1.294", validator);
-    Eqe0 = add_double_input(cpt, "Eqe(0):", "1.698", validator);
-    Eqprime0 = add_double_input(cpt, "E'q(0):", "0.759", validator);
-    U0 = add_double_input(cpt, "U(0):", "1.035", validator);
-    V0 = add_double_input(cpt, QChar(0x03bd)+QLatin1String("(0):"), "0.353", validator);
+    Delta0 = add_double_input(cpt, QChar(0x03b4)+QLatin1String("(0):"), "1.479", validator);
+    Eqe0 = add_double_input(cpt, "Eqe(0):", "1.818", validator);
+    Eqprime0 = add_double_input(cpt, "E'q(0):", "0.753", validator);
+    U0 = add_double_input(cpt, "U(0):", "1.036", validator);
+    V0 = add_double_input(cpt, QChar(0x03bd)+QLatin1String("(0):"), "0.508", validator);
 
     connect(U0, SIGNAL(editingFinished()), SLOT(sysparams_changed()));
     connect(V0, SIGNAL(editingFinished()), SLOT(sysparams_changed()));
@@ -217,6 +217,14 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     add_plot_curve(plot, "E'q Eiler",210,120,0, "eqp E");
     add_plot_curve(plot, "U Eiler",0,0,0, "u E");
     add_plot_curve(plot, QChar(0x03bd)+QLatin1String(" Eiler"),0,100,100, "v E");
+
+
+  //  add_plot_curve(plot, "x3 Eiler",160,0,210, "delta E");
+  //  add_plot_curve(plot, "x4 Eiler",210,0,0, "omega E");
+  //  add_plot_curve(plot, "Eqe Eiler",5,205,0, "eqe E");
+  //  add_plot_curve(plot, "x5 Eiler",210,120,0, "eqp E");
+  //  add_plot_curve(plot, "x9 Eiler",0,0,0, "u E");
+  //  add_plot_curve(plot, "x6 Eiler",0,100,100, "v E");
 
     add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Trapeze"),210,50,255, "delta T");
     add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Trapeze"),255,45,45, "omega T");
@@ -571,27 +579,27 @@ SystemParamsWidget::SystemParamsWidget(QWidget* p) : QWidget(p)
     QHBoxLayout* reg_l = new QHBoxLayout(reg);
     K0f = add_double_input(reg_l, "K0f:", "1", validator);
     K1f = add_double_input(reg_l, "K1f:", "0.1", validator);
-    Ur0 = add_double_input(reg_l, "Ur0:", "1.04", validator);
+    Ur0 = add_double_input(reg_l, "Ur0:", "1.036", validator);
     K0u = add_double_input(reg_l, "K0u:", "50", validator);
     K1u = add_double_input(reg_l, "K1u:", "3.6", validator);
 
     QGroupBox* tms = new QGroupBox("Time scales:",this);
     QHBoxLayout* tms_l = new QHBoxLayout(tms);
     T = add_double_input(tms_l, "T:", "1", validator);
-    Ty = add_double_input(tms_l, "Tj:", "5.59", validator);
+    Ty = add_double_input(tms_l, "Tj:", "7.891", validator);
     Tu = add_double_input(tms_l, "Tu:", "0.05", validator);
     Tg = add_double_input(tms_l, "Tg:", "0.02", validator);
     Te = add_double_input(tms_l, "Te:", "0.03", validator);
-    Tf = add_double_input(tms_l, "Tf:", "0.05", validator);
-    Tphi = add_double_input(tms_l, "Tphi:", "0.05", validator);
+    Tf = add_double_input(tms_l, "Tf:", "0.035", validator);
+    Tphi = add_double_input(tms_l, "Tphi:", "0.07", validator);
     Td0 = add_double_input(tms_l, "Td0:", "7", validator);
 
     QGroupBox* oth = new QGroupBox("Other constants:",this);
     QHBoxLayout* oth_l = new QHBoxLayout(oth);
     Pt0 = add_double_input(oth_l, "Pt0:", "1", validator);
-    omega_nom = add_double_input(oth_l, "omega_nom:", "314.1592653589793", validator);
-    Xdprime = add_double_input(oth_l, "Xd':", "0.194", validator);
-    Xd = add_double_input(oth_l, "Xd:", "1.42", validator);
+    omega_nom = add_double_input(oth_l, "omega_nom:", "314.159", validator);
+    Xdprime = add_double_input(oth_l, "Xd':", "0.213", validator);
+    Xd = add_double_input(oth_l, "Xd:", "1.555", validator);
     Eqenom = add_double_input(oth_l, "Eqenom:", "2.79", validator);
     Uc = add_double_input(oth_l, "Uc:", "1", validator);
 
