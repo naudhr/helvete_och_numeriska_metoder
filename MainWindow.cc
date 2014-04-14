@@ -198,7 +198,6 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     prb->addSpacing(30);
     enable_parallel = new QCheckBox(this);
     enable_parallel->setChecked(false);
-    enable_parallel->setEnabled(false);
     progress_bar_parallel = new QProgressBar(this);
     progress_bar_parallel->setFormat("Parallel");
     progress_bar_parallel->setMinimum(0);
@@ -642,7 +641,7 @@ Params::Consts SystemParamsWidget::collect_params()
     c.Ur0 = Ur0->text().toDouble();
     c.K0u = K0u->text().toDouble();
     c.K1u = K1u->text().toDouble();
-    c.T = T->text().toDouble();
+    c.T  = T ->text().toDouble();
     c.Ty = Ty->text().toDouble();
     c.Tu = Tu->text().toDouble();
     c.Tg = Tg->text().toDouble();
@@ -656,6 +655,15 @@ Params::Consts SystemParamsWidget::collect_params()
     c.Xd = Xd->text().toDouble();
     c.Eqenom = Eqenom->text().toDouble();
     c.Uc = Uc->text().toDouble();
+
+    c.K1U = c.K0u - c.K1u / (c.Te - c.Tg);
+    c.K2U = c.K1u / (c.Te - c.Tg);
+    c.K1V = c.Tphi * c.T / (c.Tf - c.Tphi) / (c.T - c.Tphi) / (c.Tphi - c.Te) * (c.K0f + c.K1f / (c.Tg - c.Tphi));
+    c.K2V = c.Tf   * c.T / (c.Tphi - c.Tf) / (c.T - c.Tf  ) / (c.Tf   - c.Te) * (c.K0f + c.K1f / (c.Tg - c.Tf  ));
+    c.K3V = c.T    * c.T / (c.T  - c.Tphi) / (c.T - c.Tf  ) / (c.T    - c.Te) * (c.K0f + c.K1f / (c.Tg - c.T   ));
+    c.K4V = - c.Tg * c.T * c.K1f / (c.Tg - c.Te) / (c.Tg - c.T) / (c.Tg - c.Tphi) / (c.Tg - c.Tf);
+    c.K5V = - c.Te * c.T / (c.T - c.Te) / (c.Tphi - c.Te) / (c.Tf - c.Te) * (c.K0f + c.K1f / (c.Tg - c.Te));
+
     return c;
 }
 
