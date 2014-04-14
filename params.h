@@ -9,6 +9,7 @@ struct Params
         double K0f, K1f, Ur0, K0u, K1u;
         double T, Ty, Tu, Tg, Te, Tf, Tphi, Td0;
         double Pt0, omega_nom, Xdprime, Xd, Eqenom, Uc;
+        double K1U, K2U, K1V, K2V, K3V, K4V, K5V;
     } reg;
     struct Repl {
         double Y11, Y12, A11, A12, Y11em, Y12em, A11em, A12em, Pd;

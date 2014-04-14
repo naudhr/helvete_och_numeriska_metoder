@@ -92,6 +92,7 @@ static QLineEdit* add_double_input(QBoxLayout* layout, const QString& label, con
     layout->addWidget(new QLabel(label));
     QLineEdit* edit = new QLineEdit(value);
     edit->setValidator(validator);
+    edit->setEnabled(validator != NULL);
     layout->addWidget(edit);
     return edit;
 }
@@ -152,6 +153,17 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     seq_x9_0 = add_double_input(srt, "x9(0)", "0", validator);
     seq_x0_0 = add_double_input(srt, "x10(0)", "0", validator);
 
+    par_params = new QWidget(this);
+    QHBoxLayout* prt = new QHBoxLayout(par_params);
+    prt->addWidget(new QLabel("Parallel related"));
+    par_K1U = add_double_input(prt, "K1U", "0", NULL);
+    par_K2U = add_double_input(prt, "K2U", "0", NULL);
+    par_K1V = add_double_input(prt, QLatin1String("K1")+QChar(0x03b4), "0", NULL);
+    par_K2V = add_double_input(prt, QLatin1String("K2")+QChar(0x03b4), "0", NULL);
+    par_K3V = add_double_input(prt, QLatin1String("K3")+QChar(0x03b4), "0", NULL);
+    par_K4V = add_double_input(prt, QLatin1String("K4")+QChar(0x03b4), "0", NULL);
+    par_K5V = add_double_input(prt, QLatin1String("K5")+QChar(0x03b4), "0", NULL);
+
     power_part = new QPushButton(QString::fromWCharArray(L"W11, W12, Pг, Pс, Qг, Qс"), this);
     connect(power_part, SIGNAL(clicked()), SLOT(popup_power_widget()));
 
@@ -198,7 +210,6 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     prb->addSpacing(30);
     enable_parallel = new QCheckBox(this);
     enable_parallel->setChecked(false);
-    enable_parallel->setEnabled(false);
     progress_bar_parallel = new QProgressBar(this);
     progress_bar_parallel->setFormat("Parallel");
     progress_bar_parallel->setMinimum(0);
@@ -240,6 +251,13 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     add_plot_curve(plot, "U Sequensive",60,60,60, "u S");
     add_plot_curve(plot, QChar(0x03bd)+QLatin1String(" Sequensive"),0,180,180, "v S");
 
+    add_plot_curve(plot, QChar(0x03b4)+QLatin1String(" Parallel"),210,50,255, "delta P");
+    add_plot_curve(plot, QChar(0x0394)+QString(0x03c9)+QLatin1String(" Parallel"),255,45,45, "omega P");
+    add_plot_curve(plot, "Eqe Parallel",50,255,50, "eqe P");
+    add_plot_curve(plot, "E'q Parallel",255,160,50, "eqp P");
+    add_plot_curve(plot, "U Parallel",60,60,60, "u P");
+    add_plot_curve(plot, QChar(0x03bd)+QLatin1String(" Parallel"),0,180,180, "v P");
+
     /*NoQwtPlotCurve* w1 =*/ add_plot_curve(plot, "W11 Power", 255, 0, 0, "W11");
     /*NoQwtPlotCurve* w2 =*/ add_plot_curve(plot, "W12 Power", 0, 255, 0, "W12");
     /*NoQwtPlotCurve* pg =*/ add_plot_curve(plot, QString::fromWCharArray(L"Pг Power"), 0, 0, 255, "pg");
@@ -251,6 +269,7 @@ CalculusWidget::CalculusWidget(QWidget* p) : QWidget(p)
     l->addLayout(eqv);
     l->addLayout(cpt);
     l->addWidget(seq_params);
+    l->addWidget(par_params);
     l->addLayout(prb);
     l->addWidget(view,2);
 
@@ -282,6 +301,7 @@ void CalculusWidget::some_calc_enabled()
                               enable_sequensive->isChecked() or
                               enable_parallel->isChecked() );
 
+    par_params->setVisible(enable_parallel->isChecked());
     seq_params->setVisible(enable_sequensive->isChecked());
     power_part->setVisible(enable_eiler->isChecked() and not enable_trapeze->isChecked() and not enable_sequensive->isChecked() and not enable_parallel->isChecked());
 
@@ -373,6 +393,14 @@ void CalculusWidget::sysparams_changed(Params::Consts sc)
     seq_x9_0->setText(Eqe0->text());
     seq_x0_0->setEnabled(false);
     seq_x0_0->setText(Eqe0->text());
+
+    par_K1U->setText(QString::number(p.reg.K1U));
+    par_K2U->setText(QString::number(p.reg.K2U));
+    par_K1V->setText(QString::number(p.reg.K1V));
+    par_K2V->setText(QString::number(p.reg.K2V));
+    par_K3V->setText(QString::number(p.reg.K3V));
+    par_K4V->setText(QString::number(p.reg.K4V));
+    par_K5V->setText(QString::number(p.reg.K5V));
 }
 
 void CalculusWidget::start(const Params::Consts& reg)
@@ -445,7 +473,6 @@ void CalculusWidget::start(const Params::Consts& reg)
         progress_bar_parallel->setMaximum(n);
         progress_bar_parallel->setValue(0);
         progress_bar_parallel->setFormat("Parallel: %v");
-
         QThread* c = new CalculusParallel(p);
         connect(c, SIGNAL(a_step_done(AnswerItem)), this, SLOT(parallel_step(AnswerItem)), Qt::QueuedConnection);
         connect(c, SIGNAL(finished()), this, SLOT(a_part_of_the_plot_done()), Qt::QueuedConnection);
@@ -642,7 +669,7 @@ Params::Consts SystemParamsWidget::collect_params()
     c.Ur0 = Ur0->text().toDouble();
     c.K0u = K0u->text().toDouble();
     c.K1u = K1u->text().toDouble();
-    c.T = T->text().toDouble();
+    c.T  = T ->text().toDouble();
     c.Ty = Ty->text().toDouble();
     c.Tu = Tu->text().toDouble();
     c.Tg = Tg->text().toDouble();
@@ -656,6 +683,15 @@ Params::Consts SystemParamsWidget::collect_params()
     c.Xd = Xd->text().toDouble();
     c.Eqenom = Eqenom->text().toDouble();
     c.Uc = Uc->text().toDouble();
+
+    c.K1U = c.K0u - c.K1u / (c.Te - c.Tg);
+    c.K2U = c.K1u / (c.Te - c.Tg);
+    c.K1V = c.Tphi * c.T / (c.Tf - c.Tphi) / (c.T - c.Tphi) / (c.Tphi - c.Te) * (c.K0f + c.K1f / (c.Tg - c.Tphi));
+    c.K2V = c.Tf   * c.T / (c.Tphi - c.Tf) / (c.T - c.Tf  ) / (c.Tf   - c.Te) * (c.K0f + c.K1f / (c.Tg - c.Tf  ));
+    c.K3V = c.T    * c.T / (c.T  - c.Tphi) / (c.T - c.Tf  ) / (c.T    - c.Te) * (c.K0f + c.K1f / (c.Tg - c.T   ));
+    c.K4V = - c.Tg * c.T * c.K1f / (c.Tg - c.Te) / (c.Tg - c.T) / (c.Tg - c.Tphi) / (c.Tg - c.Tf);
+    c.K5V = - c.Te * c.T / (c.T - c.Te) / (c.Tphi - c.Te) / (c.Tf - c.Te) * (c.K0f + c.K1f / (c.Tg - c.Te));
+
     return c;
 }
 

@@ -765,7 +765,6 @@ CalculusSequensive::Impl::IMatrix CalculusSequensive::Impl::calculate_I(const X&
     I(4,4) = Eqprime/r.Xdprime*c_d_v - 2*U*(c_d_v*c_d_v/r.Xdprime + s_d_v*s_d_v/r.Xd) - 2*U*e.Y11*cos(e.A11) + r.Uc*e.Y12*cos(V-e.A12);
     return I;
 }
-#undef n_exp
 
 //-----------------------------------------------------------------------
 
@@ -811,12 +810,12 @@ struct CalculusParallel::Impl
     typedef X_N<5> X;
     typedef IMatrix_N<5> IMatrix;
     typedef AMatrix_N<5> AMatrix;
-    typedef X_N<9> Xj;
+    typedef X_N<12> Xj;
 
-    X calculate_W(const X& ) const { return X(); }
-    IMatrix calculate_I(const X& ) const { return IMatrix(); }
+    X calculate_W(const X& ) const;
+    IMatrix calculate_I(const X& ) const;
 
-    //Xj calculate_xj(const X& x_n, const X& x_n_1, const Xj& xj_n_1) const;
+    Xj calculate_xj(const X& x_n, const X& x_n_1, const Xj& xj_n_1) const;
     void dirty_hack();
 
     Impl(const Params& _p) : p(_p)
@@ -826,6 +825,18 @@ struct CalculusParallel::Impl
         x(2) = p.start.Eqprime0;
         x(3) = p.start.V0;
         x(4) = p.start.U0;
+
+        xj(0) = p.start.U0;
+        xj(1) = p.reg.Ur0 - xj(0);
+        xj(2) = p.reg.K1U * xj(1);
+        xj(3) = p.reg.K2U * xj(1);
+        xj(4) = p.reg.K1V * p.start.V0;
+        xj(5) = p.reg.K2V * p.start.V0;
+        xj(6) = p.reg.K3V * p.start.V0;
+        xj(7) = p.reg.K4V * p.start.V0;
+        xj(8) = p.reg.K5V * p.start.V0;
+        xj(9) = p.start.Eqe0;
+        xj(10) = p.start.Eqe0;
     }
 
     X x;
@@ -840,15 +851,144 @@ void CalculusParallel::Impl::dirty_hack()
     if(not p.dirty_hack)
         return;
 }
+
+CalculusParallel::Impl::Xj CalculusParallel::Impl::calculate_xj(const X& x_n, const X& x_n_1, const Xj& xj_n_1) const
+{
+    const double dt =p.dt;
+    const Params::Consts& r = p.reg;
+
+    const double X1_k = xj_n_1(0), X2_k = xj_n_1(1), X3_k = xj_n_1(2), X4_k = xj_n_1(3), X5_k = xj_n_1(4),
+                 X6_k = xj_n_1(5), X7_k = xj_n_1(6), X8_k = xj_n_1(7), X9_k = xj_n_1(8), X10_k = xj_n_1(9),
+                 X11_k = xj_n_1(10), Upphi_k = xj_n_1(11);
+
+    const double V_k = x_n_1(3);        const double V = x_n(3);
+    const double U_k = x_n_1(4);        const double U = x_n(4);
+
+    const double X1 = X1_k * _exp(r.Tu) + U - U_k + n_exp(r.Tu) * (U_k - r.Tu/dt * (U - U_k));
+    const double X2 = r.Ur0 - X1;
+    const double X3 = X3_k * _exp(r.Te) + r.K1U * (X2 - X2_k + n_exp(r.Te) * (X2_k - r.Te/dt * (X2 - X2_k)));
+    const double X4 = X4_k * _exp(r.Tg) + r.K2U * (X2 - X2_k + n_exp(r.Tg) * (X2_k - r.Tg/dt * (X2 - X2_k)));
+    const double X5 = X5_k * _exp(r.Tphi) + r.K1V * (V - V_k + n_exp(r.Tphi) * (V_k - r.Tphi/dt * (V - V_k)));
+    const double X6 = X6_k * _exp(r.Tf  ) + r.K2V * (V - V_k + n_exp(r.Tf  ) * (V_k - r.Tf  /dt * (V - V_k)));
+    const double X7 = X7_k * _exp(r.T   ) + r.K3V * (V - V_k + n_exp(r.T   ) * (V_k - r.T   /dt * (V - V_k)));
+    const double X8 = X8_k * _exp(r.Tg  ) + r.K4V * (V - V_k + n_exp(r.Tg  ) * (V_k - r.Tg  /dt * (V - V_k)));
+    const double X9 = X9_k * _exp(r.Te  ) + r.K5V * (V - V_k + n_exp(r.Te  ) * (V_k - r.Te  /dt * (V - V_k)));
+    const double X10 = X10_k * _exp(r.Te) + p.start.Eqe0 * n_exp(r.Te);
+    const double X11 = X11_k * _exp(r.Te) + e.Upphi - Upphi_k + n_exp(r.Te) * (Upphi_k - r.Te/dt * (e.Upphi - Upphi_k));
+    //const double Eqe = X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10 + X11;
+
+    Xj xj_n;
+    xj_n(0) = X1;
+    xj_n(1) = X2;
+    xj_n(2) = X3;
+    xj_n(3) = X4;
+    xj_n(4) = X5;
+    xj_n(5) = X6;
+    xj_n(6) = X7;
+    xj_n(7) = X8;
+    xj_n(8) = X9;
+    xj_n(9) = X10;
+    xj_n(10) = X11;
+    xj_n(11) = e.Upphi;
+
+    return xj_n;
+}
+
+CalculusParallel::Impl::X CalculusParallel::Impl::calculate_W(const X& x_i_1) const
+{
+    const double dt =p.dt;
+    const Params::Consts& r = p.reg;
+    const X& x_k_1 = x;
+
+    const double Xdp = (r.Xd-r.Xdprime)/r.Xd/r.Xdprime;
+
+    const double domega_k = x_k_1(0);   const double domega = x_i_1(0);
+    const double delta_k = x_k_1(1);    const double delta = x_i_1(1);
+    const double Eqprime_k = x_k_1(2);  const double Eqprime = x_i_1(2);
+                                        const double V = x_i_1(3);
+                                        const double U = x_i_1(4);
+
+    const double d_v = delta-V;
+    const double s_d_v = sin(d_v);
+    const double c_d_v = cos(d_v);
+
+    const Xj xj_n = calculate_xj(x_i_1, x_k_1, xj);
+    //const double Eqe = X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10 + X11;
+    const double Eqe = xj_n(2) + xj_n(3) + xj_n(4) + xj_n(5) + xj_n(6) + xj_n(7) + xj_n(8) + xj_n(9) + xj_n(10);
+
+    X W;
+    W(0) = delta - delta_k - dt*domega;
+    W(1) = domega - domega_k - (dt/r.Ty)*r.omega_nom*(r.Pt0 - e.Pd/r.omega_nom*domega - Eqprime*U/r.Xdprime*s_d_v + U*U*Xdp*s_d_v*c_d_v);
+    W(2) = Eqprime - Eqprime_k - (dt/r.Td0)*(Eqe - Eqprime*r.Xd/r.Xdprime + U*r.Xd*Xdp*c_d_v);
+    W(3) = Eqprime*U/r.Xdprime*s_d_v - U*U*Xdp*s_d_v*c_d_v - U*U*e.Y11*sin(e.A11) - U*r.Uc*e.Y12*sin(V-e.A12);
+    W(4) = Eqprime*U/r.Xdprime*c_d_v - U*U*(c_d_v*c_d_v/r.Xdprime + s_d_v*s_d_v/r.Xd) - U*U*e.Y11*cos(e.A11) + U*r.Uc*e.Y12*cos(V-e.A12);
+
+    return W;
+}
+
+CalculusParallel::Impl::IMatrix CalculusParallel::Impl::calculate_I(const X& x_i_1) const
+{
+    const double dt =p.dt;
+    const Params::Consts& r = p.reg;
+
+    const double Xdp = (r.Xd-r.Xdprime)/r.Xd/r.Xdprime;
+
+    const double delta = x_i_1(1);
+    const double Eqprime = x_i_1(2);
+    const double V = x_i_1(3);
+    const double U = x_i_1(4);
+    const double d_v = delta-V;
+    const double s_d_v = sin(d_v);
+    const double c_d_v = cos(d_v);
+
+    const double dEqe_dV = r.K1V * (1 - r.Tphi/dt * n_exp(r.Tphi)) +
+                           r.K2V * (1 - r.Tf  /dt * n_exp(r.Tf  )) +
+                           r.K3V * (1 - r.T   /dt * n_exp(r.T   )) +
+                           r.K4V * (1 - r.Tg  /dt * n_exp(r.Tg  )) +
+                           r.K5V * (1 - r.Te  /dt * n_exp(r.Te  ));
+
+    const double dEqe_dU = (r.Tu/dt * n_exp(r.Tu) - 1) * (r.K1U * (1 - r.Te/dt * n_exp(r.Te)) + r.K2U * (1 - r.Tg/dt * n_exp(r.Tg)));
+
+    IMatrix I;
+
+    I(0,0) = -dt;
+    I(0,1) = 1.;
+
+    I(1,0) = (dt/r.Ty)*e.Pd + 1.;
+    I(1,1) = (dt/r.Ty)*r.omega_nom*(Eqprime*U/r.Xdprime*c_d_v - U*U*Xdp*cos(2*d_v));
+    I(1,2) = (dt/r.Ty)*r.omega_nom*U/r.Xdprime*s_d_v;
+    I(1,3) = -I(1,1);
+    I(1,4) = (dt/r.Ty)*r.omega_nom*(Eqprime/r.Xdprime*s_d_v - 2*U*Xdp*s_d_v*c_d_v);
+
+    I(2,1) = (dt/r.Td0)*U*r.Xd*Xdp*s_d_v;
+    I(2,2) = (dt/r.Td0)*r.Xd/r.Xdprime + 1.;
+    I(2,3) = -I(2,1) - (dt/r.Td0)*dEqe_dV;
+    I(2,4) = -(dt/r.Td0)*(r.Xd*Xdp*c_d_v + dEqe_dU);
+
+    I(3,1) = Eqprime*U/r.Xdprime*c_d_v - U*U*Xdp*cos(2*d_v);
+    I(3,2) = U/r.Xdprime*s_d_v;
+    I(3,3) = -I(3,1) - U*r.Uc*e.Y12*cos(V-e.A12);
+    I(3,4) = Eqprime/r.Xdprime*s_d_v - 2.*U*Xdp*s_d_v*c_d_v - 2.*U*e.Y11*sin(e.A11) - r.Uc*e.Y12*sin(V-e.A12);
+
+    I(4,1) = U*U*Xdp*2*s_d_v*c_d_v - Eqprime*U/r.Xdprime*s_d_v;
+    I(4,2) = U/r.Xdprime*c_d_v;
+    I(4,3) = -I(4,1) - U*r.Uc*e.Y12*sin(V-e.A12);
+    I(4,4) = Eqprime/r.Xdprime*c_d_v - 2*U*(c_d_v*c_d_v/r.Xdprime + s_d_v*s_d_v/r.Xd) - 2*U*e.Y11*cos(e.A11) + r.Uc*e.Y12*cos(V-e.A12);
+    return I;
+}
+
 //-----------------------------------------------------------------------
 
 CalculusParallel::CalculusParallel(const Params& p) : Calculus(p), pimpl(new CalculusParallel::Impl(p)) {}
 
 void CalculusParallel::emit_x(double t, size_t row, size_t n_steps)
 {
+    //const double Eqe = X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10 + X11;
+    const double Eqe = pimpl->xj(2) + pimpl->xj(3) + pimpl->xj(4) + pimpl->xj(5) + pimpl->xj(6) + pimpl->xj(7) + pimpl->xj(8) + pimpl->xj(9) + pimpl->xj(10);
+
     AnswerItem i;
     i.time=t, i.row=row, i.set_no=3, i.n_steps=n_steps;
-    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=pimpl->xj(8);
+    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=Eqe;
     i.Eqprime=pimpl->x(2), i.V=pimpl->x(3), i.U=pimpl->x(4);
     emit a_step_done(i);
 }
@@ -858,6 +998,9 @@ void CalculusParallel::solve_newton(double t, size_t& n_steps)
     // recalculating and reassigning 'e' at every step is essential to get some hysteresis behaviour
     pimpl->e = recalculate_equiv_params(t, pimpl->x(4), pimpl->p, pimpl->e);
     // as our newton implementation is able to return a new step value, omit some arithmetics
-    pimpl->x = solve_newton_impl(pimpl, n_steps);
+    Impl::X x = solve_newton_impl(pimpl, n_steps);
+    pimpl->xj = pimpl->calculate_xj(x, pimpl->x, pimpl->xj);
+    pimpl->dirty_hack();
+    pimpl->x = x;
 }
 

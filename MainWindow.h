@@ -69,7 +69,8 @@ class CalculusWidget : public QWidget
     QLineEdit *eps;
     QLineEdit *max_iterations;
     QLineEdit *seq_x1_0, *seq_x2_0, *seq_x4_0, *seq_x5_0, *seq_x6_0, *seq_x7_0, *seq_x9_0, *seq_x0_0;
-    QWidget* seq_params;
+    QLineEdit *par_K1U, *par_K2U, *par_K1V, *par_K2V, *par_K3V, *par_K4V, *par_K5V;
+    QWidget *seq_params, *par_params;
     QPushButton* power_part;
 
     Params collected_params;
