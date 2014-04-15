@@ -915,11 +915,12 @@ CalculusParallel::Impl::X CalculusParallel::Impl::calculate_W(const X& x_i_1) co
     const Xj xj_n = calculate_xj(x_i_1, x_k_1, xj);
     //const double Eqe = X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10 + X11;
     const double Eqe = xj_n(2) + xj_n(3) + xj_n(4) + xj_n(5) + xj_n(6) + xj_n(7) + xj_n(8) + xj_n(9) + xj_n(10);
+    const double Eqe_dirty_hacked = p.dirty_hack ? qMax(qMin(Eqe, 2*p.reg.Eqenom), 0.) : Eqe;
 
     X W;
     W(0) = delta - delta_k - dt*domega;
     W(1) = domega - domega_k - (dt/r.Ty)*r.omega_nom*(r.Pt0 - e.Pd/r.omega_nom*domega - Eqprime*U/r.Xdprime*s_d_v + U*U*Xdp*s_d_v*c_d_v);
-    W(2) = Eqprime - Eqprime_k - (dt/r.Td0)*(Eqe - Eqprime*r.Xd/r.Xdprime + U*r.Xd*Xdp*c_d_v);
+    W(2) = Eqprime - Eqprime_k - (dt/r.Td0)*(Eqe_dirty_hacked - Eqprime*r.Xd/r.Xdprime + U*r.Xd*Xdp*c_d_v);
     W(3) = Eqprime*U/r.Xdprime*s_d_v - U*U*Xdp*s_d_v*c_d_v - U*U*e.Y11*sin(e.A11) - U*r.Uc*e.Y12*sin(V-e.A12);
     W(4) = Eqprime*U/r.Xdprime*c_d_v - U*U*(c_d_v*c_d_v/r.Xdprime + s_d_v*s_d_v/r.Xd) - U*U*e.Y11*cos(e.A11) + U*r.Uc*e.Y12*cos(V-e.A12);
 
@@ -985,10 +986,11 @@ void CalculusParallel::emit_x(double t, size_t row, size_t n_steps)
 {
     //const double Eqe = X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10 + X11;
     const double Eqe = pimpl->xj(2) + pimpl->xj(3) + pimpl->xj(4) + pimpl->xj(5) + pimpl->xj(6) + pimpl->xj(7) + pimpl->xj(8) + pimpl->xj(9) + pimpl->xj(10);
+    const double Eqe_dirty_hacked = p.dirty_hack ? qMax(qMin(Eqe, 2*p.reg.Eqenom), 0.) : Eqe;
 
     AnswerItem i;
     i.time=t, i.row=row, i.set_no=3, i.n_steps=n_steps;
-    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=Eqe;
+    i.delta=pimpl->x(1), i.omega=pimpl->x(0), i.Eqe=Eqe_dirty_hacked;
     i.Eqprime=pimpl->x(2), i.V=pimpl->x(3), i.U=pimpl->x(4);
     emit a_step_done(i);
 }

@@ -306,7 +306,7 @@ void CalculusWidget::some_calc_enabled()
     power_part->setVisible(enable_eiler->isChecked() and not enable_trapeze->isChecked() and not enable_sequensive->isChecked() and not enable_parallel->isChecked());
 
     view->legend()->setVisibleSection("Eiler", enable_eiler->isChecked());
-    view->legend()->setVisibleSection("Power", enable_eiler->isChecked());
+    view->legend()->setVisibleSection("Power", power_part->isVisible());
     view->legend()->setVisibleSection("Trapeze", enable_trapeze->isChecked());
     view->legend()->setVisibleSection("Sequensive", enable_sequensive->isChecked());
     view->legend()->setVisibleSection("Parallel", enable_parallel->isChecked());
