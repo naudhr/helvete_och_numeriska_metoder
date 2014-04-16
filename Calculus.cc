@@ -836,7 +836,7 @@ struct CalculusParallel::Impl
         xj(7) = p.reg.K4V * p.start.V0;
         xj(8) = p.reg.K5V * p.start.V0;
         xj(9) = p.start.Eqe0;
-        xj(10) = p.start.Eqe0;
+        xj(10) = 0.; // Uрф(0)
     }
 
     X x;
